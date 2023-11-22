@@ -27,6 +27,10 @@ namespace whi_rc_bridge
 
     RcBridge::~RcBridge()
     {
+        geometry_msgs::Twist msg;
+        msg.linear.x = 0.0;
+		msg.angular.z = 0.0;
+		pub_twist_->publish(msg);
     }
 
     void RcBridge::init()
@@ -40,6 +44,12 @@ namespace whi_rc_bridge
         node_handle_->param("max_angular", max_angular_, 1.57);
         node_handle_->getParam("channels_name", channels_name_);
         node_handle_->getParam("channels_offset", channels_offset_);
+        bool damp = true;
+        node_handle_->param("damp_angular", damp, true);
+        if (damp)
+        {
+            angular_range_ = pow(50.0, 3.0);
+        }
 
         // twist publisher
         std::string topic;
@@ -82,14 +92,17 @@ namespace whi_rc_bridge
         {
             dirBackForth = 1;
         }
-        else if (valForthBack > 50 + offsetForthBack)
+        else if (valForthBack > 50 - offsetForthBack)
         {
             dirBackForth = -1;
         }
 
         geometry_msgs::Twist msg;
-        msg.linear.x = dirBackForth * max_linear_ * values[indexOf("throttle")] / 100.0;
-		msg.angular.z = max_angular_ * (50 + channels_offset_[indexOf("left_right")] - values[indexOf("left_right")]) / 50.0;
+        int valThrottle = values[indexOf("throttle")];
+        msg.linear.x = dirBackForth * max_linear_ * valThrottle / 100.0;
+        double angularRatio = 50 + channels_offset_[indexOf("left_right")] - values[indexOf("left_right")];
+        angularRatio = angular_range_ > 2500.0 ? pow(angularRatio, 3.0) / angular_range_ : angularRatio / angular_range_;
+		msg.angular.z = valThrottle > channels_offset_[indexOf("throttle")] ? max_angular_ * angularRatio : 0.0;
 		pub_twist_->publish(msg);
     }
 
