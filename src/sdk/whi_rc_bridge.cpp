@@ -89,7 +89,7 @@ namespace whi_rc_bridge
 
         geometry_msgs::Twist msg;
         msg.linear.x = dirBackForth * max_linear_ * values[indexOf("throttle")] / 100.0;
-		msg.angular.z = max_angular_ * (50 + channels_offset_[indexOf("left_right")] - values[indexOf("left_right")]) / 100.0;
+		msg.angular.z = max_angular_ * (50 + channels_offset_[indexOf("left_right")] - values[indexOf("left_right")]) / 50.0;
 		pub_twist_->publish(msg);
     }
 
