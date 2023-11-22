@@ -1,2 +1,11 @@
 whi_rc_bridge:
-  dummy: dummy
+  frequency: 20.0
+  twist_topic: /cmd_vel
+  max_linear: 1.0 #m/s
+  max_angular: 1.57 #rad/s
+  channels_name: ["left_right", "forth_back", "throttle", "active"]
+  channels_offset: [-1, -1, 0, 0]
+  hardware: i2c
+  i2c:
+    bus_addr: 1
+    device_addr: 8
