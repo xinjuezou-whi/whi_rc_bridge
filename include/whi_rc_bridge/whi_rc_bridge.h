@@ -48,5 +48,6 @@ namespace whi_rc_bridge
         std::vector<std::string> channels_name_;
         std::vector<int> channels_offset_;
         double angular_range_{ 50.0 };
+		bool print_raw_{ false };
 	};
 } // namespace whi_rc_bridge

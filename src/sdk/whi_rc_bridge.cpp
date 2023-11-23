@@ -50,6 +50,7 @@ namespace whi_rc_bridge
         {
             angular_range_ = pow(50.0, 3.0);
         }
+		node_handle_->param("print_raw", print_raw_, false);
 
         // twist publisher
         std::string topic;
@@ -77,14 +78,16 @@ namespace whi_rc_bridge
 		elapsed_time_ = ros::Duration(Event.current_real - Event.last_real);
 
         auto values = bridge_->readChannels();
-#ifdef DEBUG
-    std::cout << "iic values: ";
-    for (const auto& it : values)
-    {
-        std::cout << int(it) << ",";
-    }
-    std::cout << std::endl;
-#endif
+		if (print_raw_)
+		{
+			std::cout << "iic values: ";
+			for (const auto& it : values)
+			{
+				std::cout << int(it) << ",";
+			}
+			std::cout << std::endl;
+		}
+
         int valForthBack = values[indexOf("forth_back")];
         int offsetForthBack = channels_offset_[indexOf("forth_back")];
         int dirBackForth = 0;
