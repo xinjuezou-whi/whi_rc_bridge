@@ -13,6 +13,7 @@ whi_rc_bridge:
   damp_angular: true
   channels_name: ["left_right", "forth_back", "throttle", "active"]
   channels_offset: [-1, -10, 2, 0]
+  print_raw: false
   hardware: i2c
   i2c:
     bus_addr: 1
