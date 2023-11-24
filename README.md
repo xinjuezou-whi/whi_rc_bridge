@@ -3,6 +3,11 @@ Bridging Remote Controller and velocity command(geometry_msgs/Twist). Currently,
 
 Although this bridge is designed to support most Remote Controllers, like RadioLink, further revision might be needed to adapt to other specific RC receivers.
 
+## Dependencies
+```
+git clone https://github.com/xinjuezou-whi/whi_interfaces.git
+```
+
 ## Params
 ```
 whi_rc_bridge:
