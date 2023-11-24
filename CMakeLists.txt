@@ -10,6 +10,8 @@ add_compile_options(-std=c++17)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
+  move_base_msgs
+  whi_interfaces
 )
 
 ## System dependencies are found with CMake's conventions

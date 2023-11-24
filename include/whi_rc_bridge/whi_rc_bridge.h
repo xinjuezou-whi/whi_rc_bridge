@@ -36,6 +36,7 @@ namespace whi_rc_bridge
         void init();
         void update(const ros::TimerEvent& Event);
         int indexOf(const std::string& Name);
+        void cancelNaviGoal();
 
     protected:
         std::shared_ptr<ros::NodeHandle> node_handle_{ nullptr };
@@ -43,6 +44,8 @@ namespace whi_rc_bridge
         ros::Duration elapsed_time_;
         std::unique_ptr<BaseBridge> bridge_{ nullptr };
         std::unique_ptr<ros::Publisher> pub_twist_{ nullptr };
+        std::unique_ptr<ros::Publisher> pub_state_{ nullptr };
+        std::unique_ptr<ros::Publisher> pub_cancel_goal_{ nullptr };
         double max_linear_{ 1.0 };
         double max_angular_{ 1.57 };
         std::vector<std::string> channels_name_;

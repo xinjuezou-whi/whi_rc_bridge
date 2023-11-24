@@ -12,8 +12,10 @@ All text above must be included in any redistribution.
 
 ******************************************************************/
 #include "whi_rc_bridge/whi_rc_bridge.h"
+#include "whi_interfaces/WhiMotionState.h"
 
 #include <geometry_msgs/Twist.h>
+#include <move_base_msgs/MoveBaseActionGoal.h>
 
 #include <algorithm>
 
@@ -53,10 +55,20 @@ namespace whi_rc_bridge
 		node_handle_->param("print_raw", print_raw_, false);
 
         // twist publisher
-        std::string topic;
-        node_handle_->param("twist_topic", topic, std::string("cmd_vel"));
+        std::string topicTwist;
+        node_handle_->param("twist_topic", topicTwist, std::string("cmd_vel"));
         pub_twist_ = std::make_unique<ros::Publisher>(
-            node_handle_->advertise<geometry_msgs::Twist>(topic, 50));
+            node_handle_->advertise<geometry_msgs::Twist>(topicTwist, 50));
+        // motion state publisher
+        std::string topicState;
+        node_handle_->param("motion_state_topic", topicState, std::string("motion_state"));
+        pub_state_ = std::make_unique<ros::Publisher>(
+            node_handle_->advertise<whi_interfaces::WhiMotionState>(topicState, 50));
+        // cancel goal publisher
+        std::string topicCancel;
+        node_handle_->param("cancel_goal_topic", topicCancel, std::string("move_base/cancel"));
+		pub_cancel_goal_ = std::make_unique<ros::Publisher>(
+				node_handle_->advertise<actionlib_msgs::GoalID>(topicCancel, 10));
 
         // bridge instance
         if (hardwareStr == hardware[HARDWARE_I2C])
@@ -88,25 +100,40 @@ namespace whi_rc_bridge
 			std::cout << std::endl;
 		}
 
-        int valForthBack = values[indexOf("forth_back")];
-        int offsetForthBack = channels_offset_[indexOf("forth_back")];
-        int dirBackForth = 0;
-        if (valForthBack < 50 + offsetForthBack)
+        whi_interfaces::WhiMotionState msgState;
+        if (values[indexOf("active")] < 100 + channels_offset_[indexOf("active")])
         {
-            dirBackForth = 1;
-        }
-        else if (valForthBack > 50 - offsetForthBack)
-        {
-            dirBackForth = -1;
-        }
+            // neutralize the navigation's goal
+            cancelNaviGoal();
 
-        geometry_msgs::Twist msg;
-        int valThrottle = values[indexOf("throttle")];
-        msg.linear.x = dirBackForth * max_linear_ * valThrottle / 100.0;
-        double angularRatio = 50 + channels_offset_[indexOf("left_right")] - values[indexOf("left_right")];
-        angularRatio = angular_range_ > 2500.0 ? pow(angularRatio, 3.0) / angular_range_ : angularRatio / angular_range_;
-		msg.angular.z = valThrottle > channels_offset_[indexOf("throttle")] ? max_angular_ * angularRatio : 0.0;
-		pub_twist_->publish(msg);
+            msgState.state = whi_interfaces::WhiMotionState::STA_REMOTE;
+            pub_state_->publish(msgState);
+
+            int valForthBack = values[indexOf("forth_back")];
+            int offsetForthBack = channels_offset_[indexOf("forth_back")];
+            int dirBackForth = 0;
+            if (valForthBack < 50 + offsetForthBack)
+            {
+                dirBackForth = 1;
+            }
+            else if (valForthBack > 50 - offsetForthBack)
+            {
+                dirBackForth = -1;
+            }
+
+            geometry_msgs::Twist msgTwist;
+            int valThrottle = values[indexOf("throttle")];
+            msgTwist.linear.x = dirBackForth * max_linear_ * valThrottle / 100.0;
+            double angularRatio = 50 + channels_offset_[indexOf("left_right")] - values[indexOf("left_right")];
+            angularRatio = angular_range_ > 2500.0 ? pow(angularRatio, 3.0) / angular_range_ : angularRatio / angular_range_;
+            msgTwist.angular.z = valThrottle > channels_offset_[indexOf("throttle")] ? max_angular_ * angularRatio : 0.0;
+            pub_twist_->publish(msgTwist);
+        }
+        else
+        {
+            msgState.state = whi_interfaces::WhiMotionState::STA_AUTO;
+            pub_state_->publish(msgState);
+        }
     }
 
     int RcBridge::indexOf(const std::string& Name)
@@ -121,4 +148,10 @@ namespace whi_rc_bridge
             return 0;
         }
     }
+
+	void RcBridge::cancelNaviGoal()
+	{
+		actionlib_msgs::GoalID cancelID; // must be an empty goal msg
+		pub_cancel_goal_->publish(cancelID);
+	}
 } // namespace whi_rc_bridge
