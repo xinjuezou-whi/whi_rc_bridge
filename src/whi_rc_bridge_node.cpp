@@ -38,7 +38,7 @@ int main(int argc, char** argv)
 	/// ros infrastructure
     const std::string nodeName("whi_rc_bridge"); 
 	ros::init(argc, argv, nodeName);
-	auto nodeHandle = std::make_shared<ros::NodeHandle>(nodeName);
+	auto nodeHandle = std::make_shared<ros::NodeHandle>();
 
 	/// node logic
 	auto instance = std::make_unique<whi_rc_bridge::RcBridge>(nodeHandle);

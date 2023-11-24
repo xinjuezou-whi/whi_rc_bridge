@@ -39,34 +39,34 @@ namespace whi_rc_bridge
     {
         // params
         double frequency = 10.0;
-        node_handle_->param("frequency", frequency, 10.0);
+        node_handle_->param("whi_rc_bridge/frequency", frequency, 10.0);
         std::string hardwareStr;
-		node_handle_->param("hardware", hardwareStr, std::string(hardware[HARDWARE_I2C]));
-        node_handle_->param("max_linear", max_linear_, 1.0);
-        node_handle_->param("max_angular", max_angular_, 1.57);
-        node_handle_->getParam("channels_name", channels_name_);
-        node_handle_->getParam("channels_offset", channels_offset_);
+		node_handle_->param("whi_rc_bridge/hardware", hardwareStr, std::string(hardware[HARDWARE_I2C]));
+        node_handle_->param("whi_rc_bridge/max_linear", max_linear_, 1.0);
+        node_handle_->param("whi_rc_bridge/max_angular", max_angular_, 1.57);
+        node_handle_->getParam("whi_rc_bridge/channels_name", channels_name_);
+        node_handle_->getParam("whi_rc_bridge/channels_offset", channels_offset_);
         bool damp = true;
-        node_handle_->param("damp_angular", damp, true);
+        node_handle_->param("whi_rc_bridge/damp_angular", damp, true);
         if (damp)
         {
             angular_range_ = pow(50.0, 3.0);
         }
-		node_handle_->param("print_raw", print_raw_, false);
+		node_handle_->param("whi_rc_bridge/print_raw", print_raw_, false);
 
         // twist publisher
         std::string topicTwist;
-        node_handle_->param("twist_topic", topicTwist, std::string("cmd_vel"));
+        node_handle_->param("whi_rc_bridge/twist_topic", topicTwist, std::string("cmd_vel"));
         pub_twist_ = std::make_unique<ros::Publisher>(
             node_handle_->advertise<geometry_msgs::Twist>(topicTwist, 50));
         // motion state publisher
         std::string topicState;
-        node_handle_->param("motion_state_topic", topicState, std::string("motion_state"));
+        node_handle_->param("whi_rc_bridge/motion_state_topic", topicState, std::string("motion_state"));
         pub_state_ = std::make_unique<ros::Publisher>(
             node_handle_->advertise<whi_interfaces::WhiMotionState>(topicState, 50));
         // cancel goal publisher
         std::string topicCancel;
-        node_handle_->param("cancel_goal_topic", topicCancel, std::string("move_base/cancel"));
+        node_handle_->param("whi_rc_bridge/cancel_goal_topic", topicCancel, std::string("move_base/cancel"));
 		pub_cancel_goal_ = std::make_unique<ros::Publisher>(
 				node_handle_->advertise<actionlib_msgs::GoalID>(topicCancel, 10));
 
@@ -75,8 +75,8 @@ namespace whi_rc_bridge
         {
             int busAddr = 0;
             int deviceAddr = 0;
-            node_handle_->param("i2c/bus_addr", busAddr, -1);
-            node_handle_->param("i2c/device_addr", deviceAddr, -1);
+            node_handle_->param("whi_rc_bridge/i2c/bus_addr", busAddr, -1);
+            node_handle_->param("whi_rc_bridge/i2c/device_addr", deviceAddr, -1);
             bridge_ = std::make_unique<I2cBridge>(busAddr, deviceAddr);
         }
 
