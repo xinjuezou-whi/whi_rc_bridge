@@ -12,12 +12,14 @@ git clone https://github.com/xinjuezou-whi/whi_interfaces.git
 ```
 whi_rc_bridge:
   frequency: 20.0
-  twist_topic: /cmd_vel
+  twist_topic: cmd_vel
   max_linear: 1.0 #m/s
   max_angular: 1.57 #rad/s
   damp_angular: true
+  motion_state_topic: motion_state
+  cancel_goal_topic: move_base/cancel
   channels_name: ["left_right", "forth_back", "throttle", "active"]
-  channels_offset: [-1, -10, 2, 0]
+  channels_offset: [-1, -10, 2, -40]
   print_raw: false
   hardware: i2c
   i2c:
