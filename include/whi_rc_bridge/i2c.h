@@ -13,7 +13,7 @@ All text above must be included in any redistribution.
 Changelog:
 2022-03-06: Initial version
 2022-11-05: fix read with register
-2022-xx-xx: xxx
+2023-xx-xx: xxx
 ******************************************************************/
 #pragma once
 #include <cstdint>

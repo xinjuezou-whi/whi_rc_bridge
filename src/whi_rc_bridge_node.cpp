@@ -12,7 +12,7 @@ All text above must be included in any redistribution.
 
 Changelog:
 2023-11-20: Initial version
-2022-xx-xx: xxx
+2023-xx-xx: xxx
 ******************************************************************/
 #include "whi_rc_bridge/whi_rc_bridge.h"
 
