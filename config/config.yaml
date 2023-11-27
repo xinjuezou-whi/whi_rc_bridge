@@ -13,3 +13,5 @@ whi_rc_bridge:
   i2c:
     bus_addr: 1
     device_addr: 8
+  serial:
+    device: /dev/ttyTHS1

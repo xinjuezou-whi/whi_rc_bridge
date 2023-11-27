@@ -17,7 +17,7 @@ Changelog:
 #pragma once
 #include <ros/ros.h>
 
-#include "whi_rc_bridge/bridge_iic.h"
+#include "whi_rc_bridge/bridge_base.h"
 
 namespace whi_rc_bridge
 {

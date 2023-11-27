@@ -12,6 +12,8 @@ All text above must be included in any redistribution.
 
 ******************************************************************/
 #include "whi_rc_bridge/whi_rc_bridge.h"
+#include "whi_rc_bridge/bridge_iic.h"
+#include "whi_rc_bridge/bridge_sbus.h"
 #include "whi_interfaces/WhiMotionState.h"
 
 #include <geometry_msgs/Twist.h>
@@ -79,6 +81,12 @@ namespace whi_rc_bridge
             node_handle_->param("whi_rc_bridge/i2c/device_addr", deviceAddr, -1);
             bridge_ = std::make_unique<I2cBridge>(busAddr, deviceAddr);
         }
+        else if (hardwareStr == hardware[HARDWARE_SERIAL])
+        {
+            std::string devAddr;
+            node_handle_->param("whi_rc_bridge/serial/device", devAddr, std::string("/dev/ttyUSB0"));
+            bridge_ = std::make_unique<SbusBridge>(devAddr);
+        }
 
         ros::Duration updateFreq = ros::Duration(1.0 / frequency);
 		non_realtime_loop_ = std::make_unique<ros::Timer>(node_handle_->createTimer(
@@ -101,7 +109,8 @@ namespace whi_rc_bridge
 		}
 
         whi_interfaces::WhiMotionState msgState;
-        if (values[indexOf("active")] < 100 + channels_offset_[indexOf("active")])
+        int indexActive = indexOf("active");
+        if (indexActive < values.size() && values[indexActive] < 100 + channels_offset_[indexActive])
         {
             // neutralize the navigation's goal
             cancelNaviGoal();
