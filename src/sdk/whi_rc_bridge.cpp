@@ -100,7 +100,7 @@ namespace whi_rc_bridge
         auto values = bridge_->readChannels();
 		if (print_raw_)
 		{
-			std::cout << "iic values: ";
+			std::cout << "channel values: ";
 			for (const auto& it : values)
 			{
 				std::cout << int(it) << ",";

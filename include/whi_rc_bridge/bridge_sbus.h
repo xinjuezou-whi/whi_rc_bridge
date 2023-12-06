@@ -19,10 +19,34 @@ Changelog:
 
 #include <string>
 #include <thread>
+#include <mutex>
 #include <atomic>
 
 namespace whi_rc_bridge
 {
+    struct SbusData
+    {
+        // SBUS message definitions
+        static constexpr int8_t PAYLOAD_LEN = 23;
+        static constexpr int8_t HEADER_LEN = 1;
+        static constexpr int8_t FOOTER_LEN = 1;
+        static constexpr int8_t NUM_SBUS_CH = 16;
+        static constexpr uint8_t HEADER = 0x0F;
+        static constexpr uint8_t FOOTER = 0x00;
+        static constexpr uint8_t FOOTER2 = 0x04;
+        static constexpr uint8_t CH17_MASK = 0x01;
+        static constexpr uint8_t CH18_MASK = 0x02;
+        static constexpr uint8_t LOST_FRAME_MASK = 0x04;
+        static constexpr uint8_t FAILSAFE_MASK = 0x08;
+        static constexpr int8_t NUM_CH = 16;
+
+        bool lost_frame_;
+        bool failsafe_;
+        bool ch17_;
+        bool ch18_;
+        int16_t ch_[NUM_CH];
+    };
+    
     class SbusBridge : public BaseBridge
     {
     public:
@@ -44,22 +68,10 @@ namespace whi_rc_bridge
         int serial_handle_{ -1 };
         std::thread th_read_;
 	    std::atomic_bool terminated_{ false };
-        uint8_t pre_byte_{ FOOTER };
-        uint8_t msg_buf_[25];
+        uint8_t pre_byte_{ SbusData::FOOTER };
+        uint8_t msg_buf_[SbusData::PAYLOAD_LEN + SbusData::HEADER_LEN + SbusData::FOOTER_LEN];
         int index_{ 0 };
-
-    protected:
-        // SBUS message definitions
-        static constexpr int8_t PAYLOAD_LEN = 23;
-        static constexpr int8_t HEADER_LEN = 1;
-        static constexpr int8_t FOOTER_LEN = 1;
-        static constexpr int8_t NUM_SBUS_CH = 16;
-        static constexpr uint8_t HEADER = 0x0F;
-        static constexpr uint8_t FOOTER = 0x00;
-        static constexpr uint8_t FOOTER2 = 0x04;
-        static constexpr uint8_t CH17_MASK = 0x01;
-        static constexpr uint8_t CH18_MASK = 0x02;
-        static constexpr uint8_t LOST_FRAME_MASK = 0x04;
-        static constexpr uint8_t FAILSAFE_MASK = 0x08;
+        SbusData data_;
+        std::mutex mtx_;
     };
 } // namespace whi_rc_bridge

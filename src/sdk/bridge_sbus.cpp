@@ -20,6 +20,7 @@ All text above must be included in any redistribution.
 #include <unistd.h>
 #include <functional>
 #include <iostream>
+#include <cstring>
 
 namespace whi_rc_bridge
 {
@@ -45,9 +46,25 @@ namespace whi_rc_bridge
         }
     }
 
+    static int mapRange(int Value, int SrcMin, int SrcMax, int DstMin, int DstMax)
+    {
+        return (Value - SrcMin) * (DstMax - DstMin) / (SrcMax - SrcMin) + DstMin;
+    }
+
     std::vector<int> SbusBridge::readChannels()
     {
-        return std::vector<int>();
+        int16_t buff[SbusData::NUM_CH] = { 0 };
+        {
+            const std::lock_guard<std::mutex> lock(mtx_);
+            memcpy(buff, data_.ch_, sizeof(int16_t) * SbusData::NUM_CH);
+        }
+
+        std::vector<int> chData;
+        for (const auto& it : buff)
+        {
+            chData.push_back(mapRange(it, 200, 1800, 0, 100));
+        }
+        return chData;
     }
 
     bool SbusBridge::openSerial(const std::string& DeviceAddr, int Baudrate)
@@ -82,6 +99,13 @@ namespace whi_rc_bridge
                 tio.c_cflag |= PARENB; // enable parity
                 tio.c_cflag &= ~PARODD; // even parity
                 tio.c_cflag |= CSTOPB; // 2 stop bits
+                //
+                tio.c_cflag &= ~CSIZE ;
+                tio.c_cflag |= CS8 ;
+                tio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG) ;
+                tio.c_oflag &= ~OPOST ;
+                tio.c_cc[VMIN] = 0;
+	            tio.c_cc[VTIME] = 0;
                 // Set new serial port settings via supported ioctl
                 rc = ioctl(serial_handle_, TCSETS2, &tio);
 
@@ -136,7 +160,8 @@ namespace whi_rc_bridge
                 {
                     if (index_ == 0)
                     {
-                        if ((it == HEADER) && ((pre_byte_ == FOOTER) || ((pre_byte_ & 0x0F) == FOOTER2)))
+                        if ((it == SbusData::HEADER) &&
+                            (pre_byte_ == SbusData::FOOTER || (pre_byte_ & 0x0F) == SbusData::FOOTER2))
                         {
                             msg_buf_[index_++] = it;
                         }
@@ -145,52 +170,46 @@ namespace whi_rc_bridge
                             index_ = 0;
                         }
                     }
-                    else if (index_ < PAYLOAD_LEN + HEADER_LEN)
+                    else if (index_ < SbusData::PAYLOAD_LEN + SbusData::HEADER_LEN)
                     {
                         msg_buf_[index_++] = it;
                     }
-                    else if (index_ < PAYLOAD_LEN + HEADER_LEN + FOOTER_LEN)
+                    else if (index_ < SbusData::PAYLOAD_LEN + SbusData::HEADER_LEN + SbusData::FOOTER_LEN)
                     {
                         index_ = 0;
                         pre_byte_ = it;
-                        if (it == FOOTER || (it & 0x0F) == FOOTER2)
+                        if (it == SbusData::FOOTER || (it & 0x0F) == SbusData::FOOTER2)
                         {
-                            // // Grab the channel data
-                            auto ch0 = static_cast<int16_t>(msg_buf_[1] | ((msg_buf_[2] << 8) & 0x07FF));
-                            auto ch1 = static_cast<int16_t>((msg_buf_[2] >> 3) | ((msg_buf_[3] << 5) & 0x07FF));
-                            auto ch2 = static_cast<int16_t>((msg_buf_[3] >> 6) | (msg_buf_[4] << 2) |
+                            const std::lock_guard<std::mutex> lock(mtx_);
+                            // grab the channel data
+                            data_.ch_[0] = static_cast<int16_t>(msg_buf_[1] | ((msg_buf_[2] << 8) & 0x07FF));
+                            data_.ch_[1] = static_cast<int16_t>((msg_buf_[2] >> 3) | ((msg_buf_[3] << 5) & 0x07FF));
+                            data_.ch_[2] = static_cast<int16_t>((msg_buf_[3] >> 6) | (msg_buf_[4] << 2) |
                                 ((msg_buf_[5] << 10) & 0x07FF));
-                            auto ch3 = static_cast<int16_t>((msg_buf_[5] >> 1) | ((msg_buf_[6] << 7) & 0x07FF));
-std::cout << "ch0 " << int(ch0) << ", ch1 " << int(ch1) << ", ch2 " << ch2 << ", ch3 " << ch3 << std::endl;
-                            // data_.ch[0] = static_cast<int16_t>(buf_[1] | ((buf_[2] << 8) & 0x07FF));
-                            // data_.ch[1] = static_cast<int16_t>((buf_[2] >> 3) | ((buf_[3] << 5) & 0x07FF));
-                            // data_.ch[2] = static_cast<int16_t>((buf_[3] >> 6) | (buf_[4] << 2) | ((buf_[5] << 10) & 0x07FF));
-                            // data_.ch[3] = static_cast<int16_t>((buf_[5] >> 1) | ((buf_[6] << 7) & 0x07FF));
-                            // data_.ch[4] = static_cast<int16_t>((buf_[6] >> 4) | ((buf_[7] << 4) & 0x07FF));
-                            // data_.ch[5] = static_cast<int16_t>((buf_[7] >> 7) | (buf_[8] << 1) | ((buf_[9] << 9) & 0x07FF));
-                            // data_.ch[6] = static_cast<int16_t>((buf_[9] >> 2) | ((buf_[10] << 6) & 0x07FF));
-                            // data_.ch[7] = static_cast<int16_t>((buf_[10] >> 5) | ((buf_[11] << 3) & 0x07FF));
-                            // data_.ch[8] = static_cast<int16_t>(buf_[12] | ((buf_[13] << 8) & 0x07FF));
-                            // data_.ch[9] = static_cast<int16_t>((buf_[13] >> 3) | ((buf_[14] << 5) & 0x07FF));
-                            // data_.ch[10] = static_cast<int16_t>((buf_[14] >> 6) | (buf_[15] << 2) | ((buf_[16] << 10) & 0x07FF));
-                            // data_.ch[11] = static_cast<int16_t>((buf_[16] >> 1) | ((buf_[17] << 7) & 0x07FF));
-                            // data_.ch[12] = static_cast<int16_t>((buf_[17] >> 4) | ((buf_[18] << 4) & 0x07FF));
-                            // data_.ch[13] = static_cast<int16_t>((buf_[18] >> 7) | (buf_[19] << 1) | ((buf_[20] << 9) & 0x07FF));
-                            // data_.ch[14] = static_cast<int16_t>((buf_[20] >> 2) | ((buf_[21] << 6) & 0x07FF));
-                            // data_.ch[15] = static_cast<int16_t>((buf_[21] >> 5) | ((buf_[22] << 3) & 0x07FF));
-                            // // CH 17
-                            // data_.ch17 = buf_[23] & CH17_MASK;
-                            // // CH 18
-                            // data_.ch18 = buf_[23] & CH18_MASK;
-                            // // Grab the lost frame
-                            // data_.lost_frame = buf_[23] & LOST_FRAME_MASK;
-                            // // Grab the failsafe
-                            // data_.failsafe = buf_[23] & FAILSAFE_MASK;
-                            // //return true;
-                        }
-                        else
-                        {
-                            //return false;
+                            data_.ch_[3] = static_cast<int16_t>((msg_buf_[5] >> 1) | ((msg_buf_[6] << 7) & 0x07FF));
+                            data_.ch_[4] = static_cast<int16_t>((msg_buf_[6] >> 4) | ((msg_buf_[7] << 4) & 0x07FF));
+                            data_.ch_[5] = static_cast<int16_t>((msg_buf_[7] >> 7) | (msg_buf_[8] << 1) |
+                                ((msg_buf_[9] << 9) & 0x07FF));
+                            data_.ch_[6] = static_cast<int16_t>((msg_buf_[9] >> 2) | ((msg_buf_[10] << 6) & 0x07FF));
+                            data_.ch_[7] = static_cast<int16_t>((msg_buf_[10] >> 5) | ((msg_buf_[11] << 3) & 0x07FF));
+                            data_.ch_[8] = static_cast<int16_t>(msg_buf_[12] | ((msg_buf_[13] << 8) & 0x07FF));
+                            data_.ch_[9] = static_cast<int16_t>((msg_buf_[13] >> 3) | ((msg_buf_[14] << 5) & 0x07FF));
+                            data_.ch_[10] = static_cast<int16_t>((msg_buf_[14] >> 6) | (msg_buf_[15] << 2) |
+                                ((msg_buf_[16] << 10) & 0x07FF));
+                            data_.ch_[11] = static_cast<int16_t>((msg_buf_[16] >> 1) | ((msg_buf_[17] << 7) & 0x07FF));
+                            data_.ch_[12] = static_cast<int16_t>((msg_buf_[17] >> 4) | ((msg_buf_[18] << 4) & 0x07FF));
+                            data_.ch_[13] = static_cast<int16_t>((msg_buf_[18] >> 7) | (msg_buf_[19] << 1) |
+                                ((msg_buf_[20] << 9) & 0x07FF));
+                            data_.ch_[14] = static_cast<int16_t>((msg_buf_[20] >> 2) | ((msg_buf_[21] << 6) & 0x07FF));
+                            data_.ch_[15] = static_cast<int16_t>((msg_buf_[21] >> 5) | ((msg_buf_[22] << 3) & 0x07FF));
+                            // CH 17
+                            data_.ch17_ = msg_buf_[23] & SbusData::CH17_MASK;
+                            // CH 18
+                            data_.ch18_ = msg_buf_[23] & SbusData::CH18_MASK;
+                            // grab the lost frame
+                            data_.lost_frame_ = msg_buf_[23] & SbusData::LOST_FRAME_MASK;
+                            // grab the failsafe
+                            data_.failsafe_ = msg_buf_[23] & SbusData::FAILSAFE_MASK;
                         }
                     }
                     else
