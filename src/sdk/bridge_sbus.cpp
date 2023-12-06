@@ -82,7 +82,7 @@ namespace whi_rc_bridge
             chData[i] = mapRange(buff[i], 200, 1800, 0, 100);
 
             // validate
-            if (chData[i] < 0)
+            if (chData[i] < 0 || chData[i] > 100)
             {
                 for (auto& it : chData)
                 {
