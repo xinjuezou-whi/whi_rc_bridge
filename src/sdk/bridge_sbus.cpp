@@ -76,9 +76,20 @@ namespace whi_rc_bridge
         }
 
         std::vector<int> chData;
-        for (const auto& it : buff)
+        chData.resize(SbusData::NUM_CH);
+        for (size_t i = 0; i < std::min(chData.size(), sizeof(buff)); ++i)
         {
-            chData.push_back(mapRange(it, 200, 1800, 0, 100));
+            chData[i] = mapRange(buff[i], 200, 1800, 0, 100);
+
+            // validate
+            if (chData[i] < 0)
+            {
+                for (auto& it : chData)
+                {
+                    it = 65535;
+                }
+                break;
+            }
         }
         return chData;
     }
