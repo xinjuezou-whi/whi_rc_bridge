@@ -52,7 +52,7 @@ namespace whi_rc_bridge
     public:
         SbusBridge() = default;
         SbusBridge(const std::string& DeviceAddr);
-        virtual ~SbusBridge() = default;
+        virtual ~SbusBridge();
 
     public:
         int readChannel(int ChannelIndex) override;

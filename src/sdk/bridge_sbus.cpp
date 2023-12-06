@@ -13,6 +13,8 @@ All text above must be included in any redistribution.
 ******************************************************************/
 #include "whi_rc_bridge/bridge_sbus.h"
 
+#include <ros/ros.h>
+
 #include <asm/termbits.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -30,6 +32,20 @@ namespace whi_rc_bridge
         {
 		    // spawn the read thread
 		    th_read_ = std::thread(std::bind(&SbusBridge::threadReadSerial, this));
+        }
+    }
+
+    SbusBridge::~SbusBridge()
+    {
+        terminated_.store(true);
+        if (th_read_.joinable())
+        {
+            th_read_.join();
+        }
+
+        if (serial_handle_ > 0)
+        {
+            close(serial_handle_);
         }
     }
 
@@ -72,6 +88,7 @@ namespace whi_rc_bridge
         serial_handle_ = open(DeviceAddr.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
         if (serial_handle_ <= 0)
         {
+            ROS_WARN_STREAM("failed to open serial " << DeviceAddr);
             return false;
         }
         else
@@ -81,7 +98,7 @@ namespace whi_rc_bridge
             if (rc)
             {
                 close(serial_handle_);
-                std::cout << "failed to get termios2" << std::endl;
+                ROS_WARN_STREAM("failed to get termios2");
 
                 return false;
             }

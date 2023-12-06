@@ -110,7 +110,8 @@ namespace whi_rc_bridge
 
         whi_interfaces::WhiMotionState msgState;
         int indexActive = indexOf("active");
-        if (indexActive < values.size() && values[indexActive] < 100 + channels_offset_[indexActive])
+        if (indexActive < values.size() &&
+            values[indexActive] >= 0 && values[indexActive] < 100 + channels_offset_[indexActive])
         {
             // neutralize the navigation's goal
             cancelNaviGoal();
