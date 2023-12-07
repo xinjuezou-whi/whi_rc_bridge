@@ -39,13 +39,21 @@ SBUS is a bus protocol for receivers to send commands to servos. Unlike PWM, SBU
 The SBUS protocol uses an inverted serial logic with a baud rate of 100000, 8 data bits, even parity, and 2 stop bits. The SBUS packet is 25 bytes long consisting of:
 
 Byte[0]: SBUS header, 0x0F
+
 Byte[1 -22]: 16 servo channels, 11 bits each
+
 Byte[23]
+
 Bit 0: channel 17 (0x01)
+
 Bit 1: channel 18 (0x02)
+
 Bit 2: frame lost (0x04)
+
 Bit 3: failsafe activated (0x08)
+
 Byte[24]: SBUS footer
+
 Note that a lost frame is indicated when a frame is lost between the transmitter and receiver. Failsafe activation typically requires that many frames are lost in a row and indicates that the receiver has moved into failsafe mode. Packets are sent approximately every 10 ms or 20 ms, depending on the system configuration.
 
 A variation on SBUS called "Fast SBUS" has started to be used. This uses a baudrate of 200000 and a quicker update rate.
