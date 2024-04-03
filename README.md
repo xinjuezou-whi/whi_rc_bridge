@@ -22,7 +22,7 @@ whi_rc_bridge:
   # channels_name: ["left_right", "forth_back", "throttle", "active"]
   # channels_offset: [-1, -10, 2, -40]
   # for T8FB(BT)
-  channels_name: ["left_right", "forth_back", "throttle", "dummy", "dummy", "dummy", "active"]
+  channels_name: ["left_right", "forth_back", "throttle", "dummy", "dummy", "clear_error", "active"]
   channels_offset: [-1, -10, 2, 0, 0, 0, -40]
   print_raw: true
   hardware: serial
