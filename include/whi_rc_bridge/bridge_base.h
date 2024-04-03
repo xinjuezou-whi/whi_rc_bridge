@@ -28,5 +28,6 @@ namespace whi_rc_bridge
     public:
         virtual int readChannel(int ChannelIndex) = 0;
         virtual std::vector<int> readChannels() = 0;
+        virtual void close() = 0;
     };
 } // namespace whi_rc_bridge

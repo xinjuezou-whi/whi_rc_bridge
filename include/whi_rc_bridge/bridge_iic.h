@@ -32,6 +32,7 @@ namespace whi_rc_bridge
     public:
         int readChannel(int ChannelIndex) override;
         std::vector<int> readChannels() override;
+        void close() override;
 
     protected:
         std::unique_ptr<I2cDriver> bus_{ nullptr };

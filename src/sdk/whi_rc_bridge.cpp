@@ -31,6 +31,8 @@ namespace whi_rc_bridge
 
     RcBridge::~RcBridge()
     {
+        bridge_->close();
+
         geometry_msgs::Twist msg;
         msg.linear.x = 0.0;
 		msg.angular.z = 0.0;
@@ -66,6 +68,11 @@ namespace whi_rc_bridge
         node_handle_->param("whi_rc_bridge/motion_state_topic", topicState, std::string("motion_state"));
         pub_state_ = std::make_unique<ros::Publisher>(
             node_handle_->advertise<whi_interfaces::WhiMotionState>(topicState, 50));
+        // rc state publisher
+        std::string topicRcState;
+        node_handle_->param("whi_rc_bridge/rcstate_topic", topicRcState, std::string("rc_state"));
+        pub_rc_state_ = std::make_unique<ros::Publisher>(
+            node_handle_->advertise<whi_interfaces::WhiMotionState>(topicRcState, 50));        
         // cancel goal publisher
         std::string topicCancel;
         node_handle_->param("whi_rc_bridge/cancel_goal_topic", topicCancel, std::string("move_base/cancel"));
@@ -116,8 +123,15 @@ namespace whi_rc_bridge
             // neutralize the navigation's goal
             cancelNaviGoal();
 
+            // set remote mode
             msgState.state = whi_interfaces::WhiMotionState::STA_REMOTE;
             pub_state_->publish(msgState);
+            // clear error
+            if (values[indexOf("clear_error")] > 0)
+            {
+                msgState.state = whi_interfaces::WhiMotionState::STA_CLEAR_FAULT;
+                pub_rc_state_->publish(msgState);
+            }
 
             int valForthBack = values[indexOf("forth_back")];
             int offsetForthBack = channels_offset_[indexOf("forth_back")];

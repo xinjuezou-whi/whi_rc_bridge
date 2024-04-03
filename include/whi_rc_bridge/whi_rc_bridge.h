@@ -45,6 +45,7 @@ namespace whi_rc_bridge
         std::unique_ptr<BaseBridge> bridge_{ nullptr };
         std::unique_ptr<ros::Publisher> pub_twist_{ nullptr };
         std::unique_ptr<ros::Publisher> pub_state_{ nullptr };
+        std::unique_ptr<ros::Publisher> pub_rc_state_{ nullptr };
         std::unique_ptr<ros::Publisher> pub_cancel_goal_{ nullptr };
         double max_linear_{ 1.0 };
         double max_angular_{ 1.57 };

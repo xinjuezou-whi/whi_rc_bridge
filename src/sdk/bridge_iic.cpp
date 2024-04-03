@@ -51,4 +51,9 @@ namespace whi_rc_bridge
             return std::vector<int>();
         }
     }
+
+    void I2cBridge::close()
+    {
+        bus_ = nullptr;
+    }
 } // namespace whi_rc_bridge

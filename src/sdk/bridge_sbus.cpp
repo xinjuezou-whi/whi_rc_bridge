@@ -37,16 +37,7 @@ namespace whi_rc_bridge
 
     SbusBridge::~SbusBridge()
     {
-        terminated_.store(true);
-        if (th_read_.joinable())
-        {
-            th_read_.join();
-        }
-
-        if (serial_handle_ > 0)
-        {
-            close(serial_handle_);
-        }
+        close();
     }
 
     int SbusBridge::readChannel(int ChannelIndex)
@@ -94,6 +85,20 @@ namespace whi_rc_bridge
         return chData;
     }
 
+    void SbusBridge::close()
+    {
+        terminated_.store(true);
+        if (th_read_.joinable())
+        {
+            th_read_.join();
+        }
+
+        if (serial_handle_ > 0)
+        {
+            ::close(serial_handle_);
+        }
+    }
+
     bool SbusBridge::openSerial(const std::string& DeviceAddr, int Baudrate)
     {
         serial_handle_ = open(DeviceAddr.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
@@ -108,7 +113,7 @@ namespace whi_rc_bridge
             int rc = ioctl(serial_handle_, TCGETS2, &tio);
             if (rc)
             {
-                close(serial_handle_);
+                ::close(serial_handle_);
                 ROS_WARN_STREAM("failed to get termios2");
 
                 return false;

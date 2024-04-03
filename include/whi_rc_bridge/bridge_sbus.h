@@ -57,6 +57,7 @@ namespace whi_rc_bridge
     public:
         int readChannel(int ChannelIndex) override;
         std::vector<int> readChannels() override;
+        void close() override;
 
     protected:
         bool openSerial(const std::string& DeviceAddr, int Baudrate);
