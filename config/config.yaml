@@ -4,7 +4,6 @@ whi_rc_bridge:
   max_linear: 1.0 #m/s
   max_angular: 1.57 #rad/s
   damp_angular: true
-  motion_state_topic: motion_state
   rc_state_topic: rc_state
   cancel_goal_topic: move_base/cancel
   # for T8S(BT)

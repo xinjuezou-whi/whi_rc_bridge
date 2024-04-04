@@ -44,7 +44,6 @@ namespace whi_rc_bridge
         ros::Duration elapsed_time_;
         std::unique_ptr<BaseBridge> bridge_{ nullptr };
         std::unique_ptr<ros::Publisher> pub_twist_{ nullptr };
-        std::unique_ptr<ros::Publisher> pub_state_{ nullptr };
         std::unique_ptr<ros::Publisher> pub_rc_state_{ nullptr };
         std::unique_ptr<ros::Publisher> pub_cancel_goal_{ nullptr };
         double max_linear_{ 1.0 };

@@ -14,7 +14,7 @@ All text above must be included in any redistribution.
 #include "whi_rc_bridge/whi_rc_bridge.h"
 #include "whi_rc_bridge/bridge_iic.h"
 #include "whi_rc_bridge/bridge_sbus.h"
-#include "whi_interfaces/WhiMotionState.h"
+#include "whi_interfaces/WhiRcState.h"
 
 #include <geometry_msgs/Twist.h>
 #include <move_base_msgs/MoveBaseActionGoal.h>
@@ -63,16 +63,11 @@ namespace whi_rc_bridge
         node_handle_->param("whi_rc_bridge/twist_topic", topicTwist, std::string("cmd_vel"));
         pub_twist_ = std::make_unique<ros::Publisher>(
             node_handle_->advertise<geometry_msgs::Twist>(topicTwist, 50));
-        // motion state publisher
-        std::string topicState;
-        node_handle_->param("whi_rc_bridge/motion_state_topic", topicState, std::string("motion_state"));
-        pub_state_ = std::make_unique<ros::Publisher>(
-            node_handle_->advertise<whi_interfaces::WhiMotionState>(topicState, 50));
         // rc state publisher
         std::string topicRcState;
         node_handle_->param("whi_rc_bridge/rcstate_topic", topicRcState, std::string("rc_state"));
         pub_rc_state_ = std::make_unique<ros::Publisher>(
-            node_handle_->advertise<whi_interfaces::WhiMotionState>(topicRcState, 50));        
+            node_handle_->advertise<whi_interfaces::WhiRcState>(topicRcState, 50));        
         // cancel goal publisher
         std::string topicCancel;
         node_handle_->param("whi_rc_bridge/cancel_goal_topic", topicCancel, std::string("move_base/cancel"));
@@ -115,7 +110,7 @@ namespace whi_rc_bridge
 			std::cout << std::endl;
 		}
 
-        whi_interfaces::WhiMotionState msgState;
+        whi_interfaces::WhiRcState msgState;
         int indexActive = indexOf("active");
         if (indexActive < values.size() &&
             values[indexActive] >= 0 && values[indexActive] < 100 + channels_offset_[indexActive])
@@ -124,12 +119,12 @@ namespace whi_rc_bridge
             cancelNaviGoal();
 
             // set remote mode
-            msgState.state = whi_interfaces::WhiMotionState::STA_REMOTE;
-            pub_state_->publish(msgState);
+            msgState.state = whi_interfaces::WhiRcState::STA_REMOTE;
+            pub_rc_state_->publish(msgState);
             // clear error
             if (values[indexOf("clear_error")] > 0)
             {
-                msgState.state = whi_interfaces::WhiMotionState::STA_CLEAR_FAULT;
+                msgState.state = whi_interfaces::WhiRcState::STA_CLEAR_FAULT;
                 pub_rc_state_->publish(msgState);
             }
 
@@ -155,8 +150,8 @@ namespace whi_rc_bridge
         }
         else
         {
-            msgState.state = whi_interfaces::WhiMotionState::STA_AUTO;
-            pub_state_->publish(msgState);
+            msgState.state = whi_interfaces::WhiRcState::STA_AUTO;
+            pub_rc_state_->publish(msgState);
         }
     }
 

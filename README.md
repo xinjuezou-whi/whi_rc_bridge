@@ -16,7 +16,7 @@ whi_rc_bridge:
   max_linear: 1.0 #m/s
   max_angular: 1.57 #rad/s
   damp_angular: true
-  motion_state_topic: motion_state
+  rc_state_topic: rc_state
   cancel_goal_topic: move_base/cancel
   # for T8S(BT)
   # channels_name: ["left_right", "forth_back", "throttle", "active"]
@@ -24,7 +24,7 @@ whi_rc_bridge:
   # for T8FB(BT)
   channels_name: ["left_right", "forth_back", "throttle", "dummy", "dummy", "clear_error", "active"]
   channels_offset: [-1, -10, 2, 0, 0, 0, -40]
-  print_raw: true
+  print_raw: false
   hardware: serial
   i2c:
     bus_addr: 1
