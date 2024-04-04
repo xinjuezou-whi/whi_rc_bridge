@@ -65,7 +65,7 @@ namespace whi_rc_bridge
             node_handle_->advertise<geometry_msgs::Twist>(topicTwist, 50));
         // rc state publisher
         std::string topicRcState;
-        node_handle_->param("whi_rc_bridge/rcstate_topic", topicRcState, std::string("rc_state"));
+        node_handle_->param("whi_rc_bridge/rc_state_topic", topicRcState, std::string("rc_state"));
         pub_rc_state_ = std::make_unique<ros::Publisher>(
             node_handle_->advertise<whi_interfaces::WhiRcState>(topicRcState, 50));        
         // cancel goal publisher
