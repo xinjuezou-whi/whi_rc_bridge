@@ -33,6 +33,10 @@ namespace whi_rc_bridge
 		    // spawn the read thread
 		    th_read_ = std::thread(std::bind(&SbusBridge::threadReadSerial, this));
         }
+        else
+        {
+            ROS_FATAL_STREAM("RC failed to open serial port " << DeviceAddr);
+        }
     }
 
     SbusBridge::~SbusBridge()
