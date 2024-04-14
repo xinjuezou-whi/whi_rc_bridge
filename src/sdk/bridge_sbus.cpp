@@ -12,10 +12,12 @@ All text above must be included in any redistribution.
 
 ******************************************************************/
 #include "whi_rc_bridge/bridge_sbus.h"
+#include "whi_rc_bridge/sbus_baudrate.h"
 
 #include <ros/ros.h>
 
-#include <asm/termbits.h>
+// #include <asm/termbits.h>
+#include <termios.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
@@ -32,6 +34,10 @@ namespace whi_rc_bridge
         {
 		    // spawn the read thread
 		    th_read_ = std::thread(std::bind(&SbusBridge::threadReadSerial, this));
+        }
+        else
+        {
+            ROS_FATAL_STREAM("RC failed to open serial port " << DeviceAddr);
         }
     }
 
@@ -95,13 +101,14 @@ namespace whi_rc_bridge
 
         if (serial_handle_ > 0)
         {
+            tcflush(serial_handle_, TCIOFLUSH);
             ::close(serial_handle_);
         }
     }
 
     bool SbusBridge::openSerial(const std::string& DeviceAddr, int Baudrate)
     {
-        serial_handle_ = open(DeviceAddr.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
+        serial_handle_ = open(DeviceAddr.c_str(), O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
         if (serial_handle_ <= 0)
         {
             ROS_WARN_STREAM("failed to open serial " << DeviceAddr);
@@ -109,40 +116,20 @@ namespace whi_rc_bridge
         }
         else
         {
-            struct termios2 tio;
-            int rc = ioctl(serial_handle_, TCGETS2, &tio);
-            if (rc)
+            tcflush(serial_handle_, TCIOFLUSH);
+            if (SbusBaudrate::sbusBaudrate(serial_handle_, Baudrate))
             {
-                ::close(serial_handle_);
-                ROS_WARN_STREAM("failed to get termios2");
+                int status = 0;
+                status |= TIOCM_DTR;
+                status |= TIOCM_RTS;
+                ioctl(serial_handle_, TIOCMSET, &status);
 
-                return false;
+                return true;
             }
             else
             {
-                // Clear the current output baud rate and fill a new value
-                tio.c_cflag &= ~CBAUD;
-                tio.c_cflag |= BOTHER;
-                tio.c_ospeed = Baudrate;
-                // Clear the current input baud rate and fill a new value
-                tio.c_cflag &= ~(CBAUD << IBSHIFT);
-                tio.c_cflag |= BOTHER << IBSHIFT;
-                tio.c_ispeed = Baudrate;
-                // SBUS
-                tio.c_cflag |= PARENB; // enable parity
-                tio.c_cflag &= ~PARODD; // even parity
-                tio.c_cflag |= CSTOPB; // 2 stop bits
-                //
-                tio.c_cflag &= ~CSIZE ;
-                tio.c_cflag |= CS8 ;
-                tio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG) ;
-                tio.c_oflag &= ~OPOST ;
-                tio.c_cc[VMIN] = 0;
-	            tio.c_cc[VTIME] = 0;
-                // Set new serial port settings via supported ioctl
-                rc = ioctl(serial_handle_, TCSETS2, &tio);
-
-                return true;
+                ROS_WARN_STREAM("failed to get termios2");
+                return false;
             }
         }
     }
