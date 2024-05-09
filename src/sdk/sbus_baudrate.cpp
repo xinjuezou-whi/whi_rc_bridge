@@ -46,16 +46,18 @@ namespace whi_rc_bridge
             tio.c_cflag &= ~PARODD; // even parity
             tio.c_cflag |= CSTOPB; // 2 stop bits
             //
-            tio.c_cflag &= ~CSIZE ;
-            tio.c_cflag |= CS8 ;
-            tio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG) ;
-            tio.c_oflag &= ~OPOST ;
+            tio.c_cflag &= ~CSIZE;
+            tio.c_cflag |= CS8;
+            tio.c_cflag |= (CLOCAL | CREAD); // ignore modem controls, enable reading
+            tio.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+            // tio.c_oflag &= ~OPOST;
+            tio.c_oflag = 0; // no remapping, no delays
             tio.c_cc[VMIN] = 0;
             tio.c_cc[VTIME] = 0;
             // Set new serial port settings via supported ioctl
             rc = ioctl(Handle, TCSETS2, &tio);
 
-            return true;
+            return (rc == 0);
         }
     }
 } // namespace whi_rc_bridge

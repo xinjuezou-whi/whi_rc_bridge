@@ -103,6 +103,7 @@ namespace whi_rc_bridge
         {
             tcflush(serial_handle_, TCIOFLUSH);
             ::close(serial_handle_);
+            serial_handle_ = -1;
         }
     }
 
@@ -119,10 +120,11 @@ namespace whi_rc_bridge
             tcflush(serial_handle_, TCIOFLUSH);
             if (SbusBaudrate::sbusBaudrate(serial_handle_, Baudrate))
             {
-                int status = 0;
-                status |= TIOCM_DTR;
-                status |= TIOCM_RTS;
-                ioctl(serial_handle_, TIOCMSET, &status);
+                // int status = 0;
+                // status |= TIOCM_DTR;
+                // status |= TIOCM_RTS;
+                // ioctl(serial_handle_, TIOCMSET, &status);
+                std::this_thread::sleep_for(std::chrono::microseconds(20));
 
                 return true;
             }
