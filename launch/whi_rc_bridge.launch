@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <launch>
   <!-- argument -->
+  <arg name="robot_name" default=""/>
 
   <!-- params -->
   <rosparam file="$(find whi_rc_bridge)/config/config.yaml" command="load" subst_value="true"/>

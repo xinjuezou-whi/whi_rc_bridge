@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- argument -->
+  <arg name="robot_name" default=""/>
+
+  <group ns="$(arg robot_name)">
+    <!-- params -->
+    <rosparam file="$(find whi_rc_bridge)/config/config.yaml" command="load" subst_value="true"/>
+
+    <!-- hardware interface -->
+    <node name="whi_rc_bridge" pkg="whi_rc_bridge" type="whi_rc_bridge_node" output="screen"/>
+  </group>
+</launch>
