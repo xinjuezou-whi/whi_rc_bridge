@@ -112,7 +112,7 @@ namespace whi_rc_bridge
 
         whi_interfaces::WhiRcState msgState;
         int indexActive = indexOf("active");
-        if (indexActive < values.size() &&
+        if (indexActive >= 0 &&
             values[indexActive] >= 0 && values[indexActive] < 100 + channels_offset_[indexActive])
         {
             // neutralize the navigation's goal
@@ -122,7 +122,8 @@ namespace whi_rc_bridge
             msgState.state = whi_interfaces::WhiRcState::STA_REMOTE;
             pub_rc_state_->publish(msgState);
             // clear error
-            if (values[indexOf("clear_error")] > 0)
+            int indexClear = indexOf("clear_error");
+            if (indexClear >= 0 && values[indexClear] > 0)
             {
                 msgState.state = whi_interfaces::WhiRcState::STA_CLEAR_FAULT;
                 pub_rc_state_->publish(msgState);
@@ -164,7 +165,7 @@ namespace whi_rc_bridge
         }
         else
         {
-            return 0;
+            return -1;
         }
     }
 
