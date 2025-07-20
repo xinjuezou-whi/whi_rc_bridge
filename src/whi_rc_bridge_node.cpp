@@ -12,7 +12,8 @@ All text above must be included in any redistribution.
 
 Changelog:
 2023-11-20: Initial version
-2023-xx-xx: xxx
+2025-07-19: Migrated from ROS 1
+2025-xx-xx: xxx
 ******************************************************************/
 #include "whi_rc_bridge/whi_rc_bridge.h"
 
@@ -36,9 +37,11 @@ int main(int argc, char** argv)
 	std::cout << "Copyright © 2023-2025 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
 	/// ros infrastructure
+    rclcpp::init(argc, argv);
+
+    // create node
     const std::string nodeName("whi_rc_bridge"); 
-	ros::init(argc, argv, nodeName);
-	auto nodeHandle = std::make_shared<ros::NodeHandle>(nodeName);
+    auto nodeHandle = std::make_shared<rclcpp::Node>(nodeName);
 
 	/// node logic
 	auto instance = std::make_unique<whi_rc_bridge::RcBridge>(nodeHandle);
@@ -48,22 +51,24 @@ int main(int argc, char** argv)
 	signal(SIGINT, signalHandler);
 	functionWrapper = [&](int)
 	{
-		instance = nullptr;
+		instance.reset(nullptr);
 
 		// all the default sigint handler does is call shutdown()
-		ros::shutdown();
+        if (rclcpp::ok())
+        {
+            rclcpp::shutdown();
+        }
 	};
 
 	/// ros spinner
 	// NOTE: We run the ROS loop in a separate thread as external calls such as
 	// service callbacks to load controllers can block the (main) control loop
 #if ASYNC
-	ros::AsyncSpinner spinner(0);
-	spinner.start();
-	ros::waitForShutdown();
+    auto executor = std::make_shared<rclcpp::executors::MultiThreadedExecutor>();
+    executor->add_node(nodeHandle);
+    executor->spin();  // blocking until shutdown
 #else
-	ros::MultiThreadedSpinner spinner(0);
-	spinner.spin();
+    rclcpp::spin(nodeHandle);
 #endif
 
 	std::cout << nodeName << " exited" << std::endl;

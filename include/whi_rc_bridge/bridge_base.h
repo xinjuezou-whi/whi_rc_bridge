@@ -12,7 +12,8 @@ All text above must be included in any redistribution.
 
 Changelog:
 2023-11-22: Initial version
-2023-xx-xx: xxx
+2025-07-19: Migrated from ROS 1
+2025-xx-xx: xxx
 ******************************************************************/
 #pragma once
 #include <vector>

@@ -14,7 +14,7 @@ All text above must be included in any redistribution.
 #include "whi_rc_bridge/bridge_sbus.h"
 #include "whi_rc_bridge/sbus_baudrate.h"
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 // #include <asm/termbits.h>
 #include <termios.h>
@@ -37,7 +37,8 @@ namespace whi_rc_bridge
         }
         else
         {
-            ROS_FATAL_STREAM("RC failed to open serial port " << DeviceAddr);
+            RCLCPP_FATAL_STREAM(rclcpp::get_logger("whi_rc_bridge"), "\033[1;31m" << 
+                "RC failed to open serial port " << DeviceAddr << "\033[0m");
         }
     }
 
@@ -112,7 +113,8 @@ namespace whi_rc_bridge
         serial_handle_ = open(DeviceAddr.c_str(), O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK);
         if (serial_handle_ <= 0)
         {
-            ROS_WARN_STREAM("failed to open serial " << DeviceAddr);
+            RCLCPP_WARN_STREAM(rclcpp::get_logger("whi_rc_bridge"), "\033[1;33m" <<
+                "failed to open serial " << DeviceAddr << "\033[0m");
             return false;
         }
         else
@@ -130,7 +132,8 @@ namespace whi_rc_bridge
             }
             else
             {
-                ROS_WARN_STREAM("failed to get termios2");
+                RCLCPP_WARN_STREAM(rclcpp::get_logger("whi_rc_bridge"), "\033[1;33m" <<
+                    "failed to get termios2" << DeviceAddr << "\033[0m");
                 return false;
             }
         }
