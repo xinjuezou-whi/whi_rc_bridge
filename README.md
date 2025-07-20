@@ -11,26 +11,27 @@ git clone https://github.com/xinjuezou-whi/whi_interfaces.git
 ## Params
 ```
 whi_rc_bridge:
-  frequency: 20.0
-  twist_topic: cmd_vel
-  max_linear: 1.0 #m/s
-  max_angular: 1.57 #rad/s
-  damp_angular: true
-  rc_state_topic: rc_state
-  cancel_goal_topic: move_base/cancel
-  # for T8S(BT)
-  # channels_name: ["left_right", "forth_back", "throttle", "active"]
-  # channels_offset: [-1, -10, 2, -40]
-  # for T8FB(BT)
-  channels_name: ["left_right", "forth_back", "throttle", "dummy", "dummy", "clear_error", "active"]
-  channels_offset: [-1, -10, 2, 0, 0, 0, -40]
-  print_raw: false
-  hardware: serial
-  i2c:
-    bus_addr: 1
-    device_addr: 8
-  serial:
-    device: /dev/ttyUSB0
+  ros__parameters:
+    frequency: 20.0
+    twist_topic: cmd_vel
+    max_linear: 1.0 #m/s
+    max_angular: 1.57 #rad/s
+    damp_angular: true
+    rc_state_topic: rc_state
+    # for T8S(BT)
+    # channels_name: ["left_right", "forth_back", "throttle", "active"]
+    # channels_offset: [-1, -10, 2, -40]
+    # for T8FB(BT)
+    channels_name: ["left_right", "forth_back", "throttle", "dummy", "dummy", "clear_error", "active"]
+    channels_offset: [-1, -10, 2, 0, 0, 0, 0]
+    print_raw: false
+    hardware: serial
+    i2c:
+      bus_addr: 1
+      device_addr: 8
+    serial:
+      device: /dev/rc
+
 ```
 
 ## Related to SBUS
