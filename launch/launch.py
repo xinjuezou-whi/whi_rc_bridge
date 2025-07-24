@@ -21,10 +21,12 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
+    # Input parameters declaration
+    robot_name = LaunchConfiguration('robot_name')
+
     # Declare arguments
-    robot_name_arg = DeclareLaunchArgument(
-        'robot_name',
-        default_value='',
+    declare_robot_name_arg = DeclareLaunchArgument(
+        'robot_name', default_value='',
         description='Robot name'
     )
 
@@ -36,7 +38,7 @@ def generate_launch_description():
     )
 
     # Node definition
-    whi_rc_bridge_node = Node(
+    start_whi_rc_bridge_node = Node(
         package='whi_rc_bridge',
         executable='whi_rc_bridge_node',
         name='whi_rc_bridge',
@@ -45,6 +47,6 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        robot_name_arg,
-        whi_rc_bridge_node
+        declare_robot_name_arg,
+        start_whi_rc_bridge_node
     ])
