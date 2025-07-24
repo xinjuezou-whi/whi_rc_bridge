@@ -50,6 +50,7 @@ namespace whi_rc_bridge
         // publisher
         using Twist = geometry_msgs::msg::TwistStamped;
         rclcpp::Publisher<Twist>::SharedPtr pub_twist_{ nullptr };
+        rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_twist_unstamped_{ nullptr };
         rclcpp::Publisher<whi_interfaces::msg::WhiRcState>::SharedPtr pub_rc_state_{ nullptr };
         // nav2 client
         using NavigateToPose = nav2_msgs::action::NavigateToPose;

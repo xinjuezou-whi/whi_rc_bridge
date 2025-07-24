@@ -14,28 +14,33 @@
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
-import os
 
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     # Input parameters declaration
     robot_name = LaunchConfiguration('robot_name')
+    use_stamped_vel = LaunchConfiguration('use_stamped_vel')
 
     # Declare arguments
     declare_robot_name_arg = DeclareLaunchArgument(
         'robot_name', default_value='',
         description='Robot name'
     )
+    declare_use_stamped_vel_arg = DeclareLaunchArgument(
+        'use_stamped_vel', default_value='false',
+        description='Flag of use stamped twist'
+    )
 
     # Path to config file
-    config_file = os.path.join(
-        get_package_share_directory('whi_rc_bridge'),
+    config_file = PathJoinSubstitution([
+        FindPackageShare('whi_rc_bridge'),
         'config',
         'config.yaml'
-    )
+    ])
 
     # Node definition
     start_whi_rc_bridge_node = Node(
@@ -43,10 +48,14 @@ def generate_launch_description():
         executable='whi_rc_bridge_node',
         name='whi_rc_bridge',
         output='screen',
-        parameters=[config_file]
+        parameters=[
+            config_file,
+            {'use_stamped_vel': LaunchConfiguration('use_stamped_vel')} # do not define in yaml if it is dynamic through argument
+        ]
     )
 
     return LaunchDescription([
         declare_robot_name_arg,
+        declare_use_stamped_vel_arg,
         start_whi_rc_bridge_node
     ])

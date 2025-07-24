@@ -32,11 +32,21 @@ namespace whi_rc_bridge
     {
         bridge_->close();
 
-        Twist msg;
-        msg.header.stamp = node_handle_->get_clock()->now();
-        msg.twist.linear.x = 0.0;
-		msg.twist.angular.z = 0.0;
-		pub_twist_->publish(msg);
+        geometry_msgs::msg::Twist msgUnstamped;
+        msgUnstamped.linear.x = 0.0;
+		msgUnstamped.angular.z = 0.0;
+        if (pub_twist_)
+        {
+            Twist msg;
+            msg.header.stamp = node_handle_->get_clock()->now();
+            msg.twist.linear = msgUnstamped.linear;
+		    msg.twist.angular = msgUnstamped.angular;
+		    pub_twist_->publish(msg);
+        }
+        else
+        {
+            pub_twist_unstamped_->publish(msgUnstamped);
+        }
     }
 
     void RcBridge::init()
@@ -66,7 +76,16 @@ namespace whi_rc_bridge
         // twist publisher
         node_handle_->declare_parameter<std::string>("twist_topic", std::string("cmd_vel"));
         auto topicTwist = node_handle_->get_parameter("twist_topic").as_string();
-        pub_twist_ = node_handle_->create_publisher<Twist>(topicTwist, 50);
+        node_handle_->declare_parameter<bool>("use_stamped_vel", true);
+        bool useStamped = node_handle_->get_parameter("use_stamped_vel").as_bool();
+        if (useStamped)
+        {
+            pub_twist_ = node_handle_->create_publisher<Twist>(topicTwist, 50);
+        }
+        else
+        {
+            pub_twist_unstamped_ = node_handle_->create_publisher<geometry_msgs::msg::Twist>(topicTwist, 50);
+        }
         // rc state publisher
         node_handle_->declare_parameter<std::string>("rc_state_topic", std::string("rc_state"));
         auto topicRcState = node_handle_->get_parameter("rc_state_topic").as_string();
@@ -147,14 +166,24 @@ namespace whi_rc_bridge
                 dirBackForth = -1;
             }
 
-            Twist msgTwist;
-            msgTwist.header.stamp = currentTime;
+            geometry_msgs::msg::Twist msgUnstamped;
             int valThrottle = values[indexOf("throttle")];
-            msgTwist.twist.linear.x = dirBackForth * max_linear_ * valThrottle / 100.0;
+            msgUnstamped.linear.x = dirBackForth * max_linear_ * valThrottle / 100.0;
             double angularRatio = 50 + channel_offsets_[indexOf("left_right")] - values[indexOf("left_right")];
             angularRatio = angular_range_ > 2500.0 ? pow(angularRatio, 3.0) / angular_range_ : angularRatio / angular_range_;
-            msgTwist.twist.angular.z = valThrottle > channel_offsets_[indexOf("throttle")] ? max_angular_ * angularRatio : 0.0;
-            pub_twist_->publish(msgTwist);
+            msgUnstamped.angular.z = valThrottle > channel_offsets_[indexOf("throttle")] ? max_angular_ * angularRatio : 0.0;
+            if (pub_twist_)
+            {
+                Twist msg;
+                msg.header.stamp = currentTime;
+                msg.twist.linear = msgUnstamped.linear;
+                msg.twist.angular = msgUnstamped.angular;
+                pub_twist_->publish(msg);
+            }
+            else
+            {
+                pub_twist_unstamped_->publish(msgUnstamped);
+            }
         }
         else
         {
