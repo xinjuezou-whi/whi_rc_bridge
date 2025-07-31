@@ -10,7 +10,7 @@ whi_rc_bridge:
     # channels_name: ["left_right", "forth_back", "throttle", "active"]
     # channels_offset: [-1, -10, 2, -40]
     # for T8FB(BT)
-    channels_name: ["left_right", "forth_back", "throttle", "dummy", "dummy", "clear_error", "active"]
+    channels_name: ["left_right", "forth_back", "throttle", "dummy", "io", "clear_error", "active"]
     channels_offset: [-1, -10, 2, 0, 0, 0, 0]
     print_raw: false
     hardware: serial
@@ -19,3 +19,7 @@ whi_rc_bridge:
       device_addr: 8
     serial:
       device: /dev/rc
+    io_request:
+      topic: modbus_io_request
+      addr: [18, 19]
+      value_to_addr: [50, 0]

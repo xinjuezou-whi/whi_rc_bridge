@@ -18,6 +18,7 @@ Changelog:
 #pragma once
 #include "whi_rc_bridge/bridge_base.h"
 #include <whi_interfaces/msg/whi_rc_state.hpp>
+#include <whi_interfaces/msg/whi_io.hpp>
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
@@ -52,6 +53,7 @@ namespace whi_rc_bridge
         rclcpp::Publisher<Twist>::SharedPtr pub_twist_{ nullptr };
         rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_twist_unstamped_{ nullptr };
         rclcpp::Publisher<whi_interfaces::msg::WhiRcState>::SharedPtr pub_rc_state_{ nullptr };
+        rclcpp::Publisher<whi_interfaces::msg::WhiIo>::SharedPtr pub_io_{ nullptr };
         // nav2 client
         using NavigateToPose = nav2_msgs::action::NavigateToPose;
         rclcpp_action::Client<NavigateToPose>::SharedPtr client_nav_to_pose_{ nullptr };
@@ -61,6 +63,7 @@ namespace whi_rc_bridge
         std::vector<std::string> channel_names_;
         std::vector<int64_t> channel_offsets_;
         double angular_range_{ 50.0 };
+        std::map<int, int> io_maps_;
 		bool print_raw_{ false };
 	};
 } // namespace whi_rc_bridge

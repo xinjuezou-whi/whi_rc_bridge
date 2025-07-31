@@ -70,6 +70,17 @@ namespace whi_rc_bridge
         {
             angular_range_ = pow(50.0, 3.0);
         }
+
+        std::vector<int64_t> ioAddr, val2Addr;
+        node_handle_->declare_parameter<std::vector<int64_t>>("io_request.addr", std::vector<int64_t>());
+        ioAddr = node_handle_->get_parameter("io_request.addr").as_integer_array();
+        node_handle_->declare_parameter<std::vector<int64_t>>("io_request.value_to_addr", std::vector<int64_t>());
+        val2Addr = node_handle_->get_parameter("io_request.value_to_addr").as_integer_array();
+        for (int i = 0; i < std::min(ioAddr.size(), val2Addr.size()); ++i)
+        {
+            io_maps_.emplace(std::make_pair<int, int>(int(val2Addr[i]), int(ioAddr[i])));
+        }
+        
         node_handle_->declare_parameter<bool>("print_raw", print_raw_);
         print_raw_ = node_handle_->get_parameter("print_raw").as_bool();
 
@@ -90,6 +101,10 @@ namespace whi_rc_bridge
         node_handle_->declare_parameter<std::string>("rc_state_topic", std::string("rc_state"));
         auto topicRcState = node_handle_->get_parameter("rc_state_topic").as_string();
         pub_rc_state_ = node_handle_->create_publisher<whi_interfaces::msg::WhiRcState>(topicRcState, 50);
+        // io request publisher
+        node_handle_->declare_parameter<std::string>("io_request.topic", std::string("modbus_io_request"));
+        auto topicIoRequest = node_handle_->get_parameter("io_request.topic").as_string();
+        pub_io_ = node_handle_->create_publisher<whi_interfaces::msg::WhiIo>(topicIoRequest, 50); 
         // cancel goal client // TODO::leave for future that the action name need be configured
         // client_nav_to_pose_ = rclcpp_action::create_client<NavigateToPose>(node_handle_, pose_action_);
 
@@ -146,12 +161,35 @@ namespace whi_rc_bridge
             // set remote mode
             msgState.state = whi_interfaces::msg::WhiRcState::STA_REMOTE;
             pub_rc_state_->publish(msgState);
-            // clear error
-            int indexClear = indexOf("clear_error");
-            if (indexClear >= 0 && values[indexClear] > 0)
+
+            // io
+            int indexIo = indexOf("io");
+            if (indexIo >= 0 && values[indexIo] < 100)
             {
-                msgState.state = whi_interfaces::msg::WhiRcState::STA_CLEAR_FAULT;
-                pub_rc_state_->publish(msgState);
+                whi_interfaces::msg::WhiIo msg;
+                msg.operation = whi_interfaces::msg::WhiIo::OPER_WRITE;
+                if (auto found = io_maps_.find(values[indexIo]); found != io_maps_.end())
+                {
+                    msg.addr = found->second;
+
+                    int indexTrigger = indexOf("clear_error");
+                    if (indexTrigger >= 0)
+                    {
+                        msg.level = values[indexTrigger] > 0 ? 1 : 0;
+
+                        pub_io_->publish(msg);
+                    }
+                }
+            }
+            else
+            {
+                // clear error
+                int indexClear = indexOf("clear_error");
+                if (indexClear >= 0 && values[indexClear] > 0)
+                {
+                    msgState.state = whi_interfaces::msg::WhiRcState::STA_CLEAR_FAULT;
+                    pub_rc_state_->publish(msgState);
+                }
             }
 
             int valForthBack = values[indexOf("forth_back")];
