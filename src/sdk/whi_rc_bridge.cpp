@@ -105,6 +105,11 @@ namespace whi_rc_bridge
         node_handle_->declare_parameter<std::string>("io_request.topic", std::string("modbus_io_request"));
         auto topicIoRequest = node_handle_->get_parameter("io_request.topic").as_string();
         pub_io_ = node_handle_->create_publisher<whi_interfaces::msg::WhiIo>(topicIoRequest, 50); 
+        // sw estop subscriber
+        node_handle_->declare_parameter<std::string>("sw_estop_topic", std::string("estop"));
+        auto topicSwEstop = node_handle_->get_parameter("sw_estop_topic").as_string();
+        sub_sw_estop_ = node_handle_->create_subscription<std_msgs::msg::Bool>(
+      		topicSwEstop, 10, std::bind(&RcBridge::callbackSwEstop, this, std::placeholders::_1));
         // cancel goal client // TODO::leave for future that the action name need be configured
         // client_nav_to_pose_ = rclcpp_action::create_client<NavigateToPose>(node_handle_, pose_action_);
 
@@ -162,65 +167,68 @@ namespace whi_rc_bridge
             msgState.state = whi_interfaces::msg::WhiRcState::STA_REMOTE;
             pub_rc_state_->publish(msgState);
 
-            // io
-            int indexIo = indexOf("io");
-            if (indexIo >= 0 && values[indexIo] < 100)
+            if (!sw_estopped_)
             {
-                whi_interfaces::msg::WhiIo msg;
-                msg.operation = whi_interfaces::msg::WhiIo::OPER_WRITE;
-                if (auto found = io_maps_.find(values[indexIo]); found != io_maps_.end())
+                // io
+                int indexIo = indexOf("io");
+                if (indexIo >= 0 && values[indexIo] < 100)
                 {
-                    msg.addr = found->second;
-
-                    int indexTrigger = indexOf("clear_error");
-                    if (indexTrigger >= 0)
+                    whi_interfaces::msg::WhiIo msg;
+                    msg.operation = whi_interfaces::msg::WhiIo::OPER_WRITE;
+                    if (auto found = io_maps_.find(values[indexIo]); found != io_maps_.end())
                     {
-                        msg.level = values[indexTrigger] > 0 ? 1 : 0;
+                        msg.addr = found->second;
 
-                        pub_io_->publish(msg);
+                        int indexTrigger = indexOf("clear_error");
+                        if (indexTrigger >= 0)
+                        {
+                            msg.level = values[indexTrigger] > 0 ? 1 : 0;
+
+                            pub_io_->publish(msg);
+                        }
                     }
                 }
-            }
-            else
-            {
-                // clear error
-                int indexClear = indexOf("clear_error");
-                if (indexClear >= 0 && values[indexClear] > 0)
+                else
                 {
-                    msgState.state = whi_interfaces::msg::WhiRcState::STA_CLEAR_FAULT;
-                    pub_rc_state_->publish(msgState);
+                    // clear error
+                    int indexClear = indexOf("clear_error");
+                    if (indexClear >= 0 && values[indexClear] > 0)
+                    {
+                        msgState.state = whi_interfaces::msg::WhiRcState::STA_CLEAR_FAULT;
+                        pub_rc_state_->publish(msgState);
+                    }
                 }
-            }
 
-            int valForthBack = values[indexOf("forth_back")];
-            int offsetForthBack = channel_offsets_[indexOf("forth_back")];
-            int dirBackForth = 0;
-            if (valForthBack < 50 + offsetForthBack)
-            {
-                dirBackForth = 1;
-            }
-            else if (valForthBack > 50 - offsetForthBack)
-            {
-                dirBackForth = -1;
-            }
+                int valForthBack = values[indexOf("forth_back")];
+                int offsetForthBack = channel_offsets_[indexOf("forth_back")];
+                int dirBackForth = 0;
+                if (valForthBack < 50 + offsetForthBack)
+                {
+                    dirBackForth = 1;
+                }
+                else if (valForthBack > 50 - offsetForthBack)
+                {
+                    dirBackForth = -1;
+                }
 
-            geometry_msgs::msg::Twist msgUnstamped;
-            int valThrottle = values[indexOf("throttle")];
-            msgUnstamped.linear.x = dirBackForth * max_linear_ * valThrottle / 100.0;
-            double angularRatio = 50 + channel_offsets_[indexOf("left_right")] - values[indexOf("left_right")];
-            angularRatio = angular_range_ > 2500.0 ? pow(angularRatio, 3.0) / angular_range_ : angularRatio / angular_range_;
-            msgUnstamped.angular.z = valThrottle > channel_offsets_[indexOf("throttle")] ? max_angular_ * angularRatio : 0.0;
-            if (pub_twist_)
-            {
-                Twist msg;
-                msg.header.stamp = currentTime;
-                msg.twist.linear = msgUnstamped.linear;
-                msg.twist.angular = msgUnstamped.angular;
-                pub_twist_->publish(msg);
-            }
-            else
-            {
-                pub_twist_unstamped_->publish(msgUnstamped);
+                geometry_msgs::msg::Twist msgUnstamped;
+                int valThrottle = values[indexOf("throttle")];
+                msgUnstamped.linear.x = dirBackForth * max_linear_ * valThrottle / 100.0;
+                double angularRatio = 50 + channel_offsets_[indexOf("left_right")] - values[indexOf("left_right")];
+                angularRatio = angular_range_ > 2500.0 ? pow(angularRatio, 3.0) / angular_range_ : angularRatio / angular_range_;
+                msgUnstamped.angular.z = valThrottle > channel_offsets_[indexOf("throttle")] ? max_angular_ * angularRatio : 0.0;
+                if (pub_twist_)
+                {
+                    Twist msg;
+                    msg.header.stamp = currentTime;
+                    msg.twist.linear = msgUnstamped.linear;
+                    msg.twist.angular = msgUnstamped.angular;
+                    pub_twist_->publish(msg);
+                }
+                else
+                {
+                    pub_twist_unstamped_->publish(msgUnstamped);
+                }
             }
         }
         else
@@ -243,11 +251,15 @@ namespace whi_rc_bridge
         }
     }
 
+    void RcBridge::callbackSwEstop(const std_msgs::msg::Bool::SharedPtr Msg)
+    {
+        sw_estopped_ = Msg->data;
+    }
+
 	void RcBridge::cancelNaviGoal()
 	{
 		if (!client_nav_to_pose_)
 		{
-			// TODO::check the action name
 			client_nav_to_pose_ = rclcpp_action::create_client<NavigateToPose>(node_handle_, "navigate_to_pose");
 		}
 		client_nav_to_pose_->async_cancel_all_goals();

@@ -6,6 +6,7 @@ whi_rc_bridge:
     max_angular: 1.57 #rad/s
     damp_angular: true
     rc_state_topic: rc_state
+    sw_estop_topic: estop
     # for T8S(BT)
     # channels_name: ["left_right", "forth_back", "throttle", "active"]
     # channels_offset: [-1, -10, 2, -40]

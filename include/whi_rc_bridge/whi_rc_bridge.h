@@ -22,6 +22,7 @@ Changelog:
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <nav2_msgs/action/navigate_to_pose.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 
@@ -42,6 +43,7 @@ namespace whi_rc_bridge
         void init();
         void update();
         int indexOf(const std::string& Name);
+        void callbackSwEstop(const std_msgs::msg::Bool::SharedPtr Msg);
         void cancelNaviGoal();
 
     protected:
@@ -54,6 +56,8 @@ namespace whi_rc_bridge
         rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_twist_unstamped_{ nullptr };
         rclcpp::Publisher<whi_interfaces::msg::WhiRcState>::SharedPtr pub_rc_state_{ nullptr };
         rclcpp::Publisher<whi_interfaces::msg::WhiIo>::SharedPtr pub_io_{ nullptr };
+        // subscriber
+        rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr sub_sw_estop_{ nullptr };
         // nav2 client
         using NavigateToPose = nav2_msgs::action::NavigateToPose;
         rclcpp_action::Client<NavigateToPose>::SharedPtr client_nav_to_pose_{ nullptr };
@@ -65,5 +69,6 @@ namespace whi_rc_bridge
         double angular_range_{ 50.0 };
         std::map<int, int> io_maps_;
 		bool print_raw_{ false };
+        bool sw_estopped_{ false };
 	};
 } // namespace whi_rc_bridge
