@@ -63,6 +63,7 @@ namespace whi_rc_bridge
         rclcpp_action::Client<NavigateToPose>::SharedPtr client_nav_to_pose_{ nullptr };
 
         double max_linear_{ 1.0 };
+        double min_angular_{ 0.01 };
         double max_angular_{ 1.57 };
         std::vector<std::string> channel_names_;
         std::vector<int64_t> channel_offsets_;

@@ -33,7 +33,7 @@ void signalHandler(int Signal)
 int main(int argc, char** argv)
 {
 	/// node version and copyright announcement
-	std::cout << "\nWHI RC Bridge VERSION 02.03.6" << std::endl;
+	std::cout << "\nWHI RC Bridge VERSION 02.03.7" << std::endl;
 	std::cout << "Copyright © 2023-2025 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
 	/// ros infrastructure

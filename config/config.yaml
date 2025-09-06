@@ -3,6 +3,7 @@ whi_rc_bridge:
     frequency: 20.0
     twist_topic: cmd_vel
     max_linear: 1.0 #m/s
+    min_angular: 0.01 #rad/s
     max_angular: 1.57 #rad/s
     damp_angular: true
     rc_state_topic: rc_state
@@ -12,7 +13,7 @@ whi_rc_bridge:
     # channels_offset: [-1, -10, 2, -40]
     # for T8FB(BT)
     channels_name: ["left_right", "forth_back", "throttle", "dummy", "io", "clear_error", "active"]
-    channels_offset: [-1, -10, 2, 0, 0, 0, 0]
+    channels_offset: [0, -10, 2, 0, 0, 0, 0]
     print_raw: false
     hardware: serial
     i2c:

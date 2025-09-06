@@ -57,6 +57,8 @@ namespace whi_rc_bridge
 
         node_handle_->declare_parameter<double>("max_linear", max_linear_);
         max_linear_ = node_handle_->get_parameter("max_linear").as_double();
+        node_handle_->declare_parameter<double>("min_angular", min_angular_);
+        min_angular_ = node_handle_->get_parameter("min_angular").as_double();
         node_handle_->declare_parameter<double>("max_angular", max_angular_);
         max_angular_ = node_handle_->get_parameter("max_angular").as_double();
         node_handle_->declare_parameter<std::vector<std::string>>("channels_name", std::vector<std::string>());
@@ -217,6 +219,7 @@ namespace whi_rc_bridge
                 double angularRatio = 50 + channel_offsets_[indexOf("left_right")] - values[indexOf("left_right")];
                 angularRatio = angular_range_ > 2500.0 ? pow(angularRatio, 3.0) / angular_range_ : angularRatio / angular_range_;
                 msgUnstamped.angular.z = valThrottle > channel_offsets_[indexOf("throttle")] ? max_angular_ * angularRatio : 0.0;
+                msgUnstamped.angular.z = fabs(msgUnstamped.angular.z) < min_angular_ ? 0.0 : msgUnstamped.angular.z;
                 if (pub_twist_)
                 {
                     Twist msg;
