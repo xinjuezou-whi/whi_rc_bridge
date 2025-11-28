@@ -166,7 +166,7 @@ namespace whi_rc_bridge
             cancelNaviGoal();
 
             // set remote mode
-            msgState.state = whi_interfaces::msg::WhiRcState::STA_REMOTE;
+            msgState.state = whi_interfaces::msg::WhiRcState::STA_ACTIVE;
             pub_rc_state_->publish(msgState);
 
             if (!sw_estopped_)
@@ -236,7 +236,7 @@ namespace whi_rc_bridge
         }
         else
         {
-            msgState.state = whi_interfaces::msg::WhiRcState::STA_AUTO;
+            msgState.state = whi_interfaces::msg::WhiRcState::STA_INACTIVE;
             pub_rc_state_->publish(msgState);
         }
     }
