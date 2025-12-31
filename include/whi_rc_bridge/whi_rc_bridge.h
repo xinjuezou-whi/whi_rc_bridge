@@ -19,6 +19,7 @@ Changelog:
 #include "whi_rc_bridge/bridge_base.h"
 #include <whi_interfaces/msg/whi_rc_state.hpp>
 #include <whi_interfaces/msg/whi_io.hpp>
+#include <whi_interfaces/msg/whi_rotary_lift_pose_stamped.hpp>
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
@@ -56,6 +57,7 @@ namespace whi_rc_bridge
         rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_twist_unstamped_{ nullptr };
         rclcpp::Publisher<whi_interfaces::msg::WhiRcState>::SharedPtr pub_rc_state_{ nullptr };
         rclcpp::Publisher<whi_interfaces::msg::WhiIo>::SharedPtr pub_io_{ nullptr };
+        rclcpp::Publisher<whi_interfaces::msg::WhiRotaryLiftPoseStamped>::SharedPtr pub_rotary_lift_{ nullptr };
         // subscriber
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr sub_sw_estop_{ nullptr };
         // nav2 client
@@ -71,5 +73,11 @@ namespace whi_rc_bridge
         std::map<int, int> io_maps_;
 		bool print_raw_{ false };
         bool sw_estopped_{ false };
+        std::vector<std::string> joints_rotary_;
+        std::vector<std::string> joints_lift_linear_;
+        std::pair<double, double> rotary_position_limits_{ -3.1415926, 3.1415926 };
+        std::pair<double, double> rotary_velocity_limits_{ 0.0, 1.2 };
+        std::pair<double, double> lift_position_limits_{ 0.0, 0.05 };
+        std::pair<double, double> lift_velocity_limits_{ 0.0, 0.015 };
 	};
 } // namespace whi_rc_bridge

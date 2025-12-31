@@ -63,6 +63,38 @@ namespace whi_rc_bridge
         max_angular_ = node_handle_->get_parameter("max_angular").as_double();
         node_handle_->declare_parameter<std::vector<std::string>>("channels_name", std::vector<std::string>());
         channel_names_ = node_handle_->get_parameter("channels_name").as_string_array();
+        node_handle_->declare_parameter<std::vector<std::string>>("rotary_joints", std::vector<std::string>());
+        joints_rotary_ = node_handle_->get_parameter("rotary_joints").as_string_array();
+        node_handle_->declare_parameter<std::vector<std::string>>("lift_joints", std::vector<std::string>());
+        joints_lift_linear_ = node_handle_->get_parameter("lift_joints").as_string_array();
+        node_handle_->declare_parameter<std::vector<double>>("rotary_position_limits", std::vector<double>{ -3.1415926, 3.1415926 });
+        auto rotaryPosArray = node_handle_->get_parameter("rotary_position_limits").as_double_array();
+        if (rotaryPosArray.size() == 2)
+        {
+            rotary_position_limits_.first = rotaryPosArray[0];
+            rotary_position_limits_.second = rotaryPosArray[1];
+        }
+        node_handle_->declare_parameter<std::vector<double>>("rotary_velocity_limits", std::vector<double>{ 0.0, 0.12 });
+        auto rotaryVelArray = node_handle_->get_parameter("rotary_velocity_limits").as_double_array();
+        if (rotaryVelArray.size() == 2)
+        {
+            rotary_velocity_limits_.first = rotaryVelArray[0];
+            rotary_velocity_limits_.second = rotaryVelArray[1];
+        }
+        node_handle_->declare_parameter<std::vector<double>>("lift_position_limits", std::vector<double>{ 0.0, 0.05 });
+        auto leftPosArray = node_handle_->get_parameter("lift_position_limits").as_double_array();
+        if (leftPosArray.size() == 2)
+        {
+            lift_position_limits_.first = leftPosArray[0];
+            lift_position_limits_.second = leftPosArray[1];
+        }
+        node_handle_->declare_parameter<std::vector<double>>("lift_velocity_limits", std::vector<double>{ 0.0, 0.015 });
+        auto leftVelArray = node_handle_->get_parameter("lift_velocity_limits").as_double_array();
+        if (leftVelArray.size() == 2)
+        {
+            lift_velocity_limits_.first = leftVelArray[0];
+            lift_velocity_limits_.second = leftVelArray[1];
+        }
         node_handle_->declare_parameter<std::vector<int64_t>>("channels_offset", std::vector<int64_t>());
         channel_offsets_ = node_handle_->get_parameter("channels_offset").as_integer_array();
 
@@ -106,7 +138,11 @@ namespace whi_rc_bridge
         // io request publisher
         node_handle_->declare_parameter<std::string>("io_request.topic", std::string("modbus_io_request"));
         auto topicIoRequest = node_handle_->get_parameter("io_request.topic").as_string();
-        pub_io_ = node_handle_->create_publisher<whi_interfaces::msg::WhiIo>(topicIoRequest, 50); 
+        pub_io_ = node_handle_->create_publisher<whi_interfaces::msg::WhiIo>(topicIoRequest, 50);
+        // rotary lift publisher
+        node_handle_->declare_parameter<std::string>("rotary_lift_topic", std::string("cmd_rotary_lift"));
+        auto topicRotaryLift = node_handle_->get_parameter("rotary_lift_topic").as_string();
+        pub_rotary_lift_ = node_handle_->create_publisher<whi_interfaces::msg::WhiRotaryLiftPoseStamped>(topicRotaryLift, 50);
         // sw estop subscriber
         node_handle_->declare_parameter<std::string>("sw_estop_topic", std::string("estop"));
         auto topicSwEstop = node_handle_->get_parameter("sw_estop_topic").as_string();
@@ -159,85 +195,180 @@ namespace whi_rc_bridge
         whi_interfaces::msg::WhiRcState msgState;
         msgState.header.stamp = currentTime;
         int indexActive = indexOf("active");
-        if (indexActive >= 0 &&
-            values[indexActive] >= 0 && values[indexActive] < 100 + channel_offsets_[indexActive])
+        if (indexActive >= 0)
         {
-            // neutralize the navigation's goal
-            cancelNaviGoal();
-
-            // set remote mode
-            msgState.state = whi_interfaces::msg::WhiRcState::STA_ACTIVE;
-            pub_rc_state_->publish(msgState);
-
-            if (!sw_estopped_)
+            if ((values[indexActive] <= 50 + abs(channel_offsets_[indexActive])) &&
+                (values[indexActive] >= 50 - abs(channel_offsets_[indexActive])))
             {
-                // io
-                int indexIo = indexOf("io");
-                if (indexIo >= 0 && values[indexIo] < 100)
+                /// active
+                // neutralize the navigation's goal
+                cancelNaviGoal();
+
+                // set remote mode
+                msgState.state = whi_interfaces::msg::WhiRcState::STA_ACTIVE;
+                pub_rc_state_->publish(msgState);
+
+                if (!sw_estopped_)
                 {
-                    whi_interfaces::msg::WhiIo msg;
-                    msg.operation = whi_interfaces::msg::WhiIo::OPER_WRITE;
-                    if (auto found = io_maps_.find(values[indexIo]); found != io_maps_.end())
+                    // io and clear error
+                    int indexIo = indexOf("io");
+                    if (indexIo >= 0)
                     {
-                        msg.addr = found->second;
-
-                        int indexTrigger = indexOf("clear_error");
-                        if (indexTrigger >= 0)
+                        if (values[indexIo] < 100 - channel_offsets_[indexIo])
                         {
-                            msg.level = values[indexTrigger] > 0 ? 1 : 0;
+                            // io control
+                            whi_interfaces::msg::WhiIo msg;
+                            msg.operation = whi_interfaces::msg::WhiIo::OPER_WRITE;
+                            if (auto found = io_maps_.find(values[indexIo]); found != io_maps_.end())
+                            {
+                                msg.addr = found->second;
 
-                            pub_io_->publish(msg);
+                                int indexTrigger = indexOf("clear_error");
+                                if (indexTrigger >= 0)
+                                {
+                                    msg.level = values[indexTrigger] > 0 - channel_offsets_[indexTrigger] ? 1 : 0;
+
+                                    pub_io_->publish(msg);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // clear error
+                            int indexClear = indexOf("clear_error");
+                            if (indexClear >= 0 && values[indexClear] > 0 - channel_offsets_[indexClear])
+                            {
+                                msgState.state = whi_interfaces::msg::WhiRcState::STA_CLEAR_FAULT;
+                                pub_rc_state_->publish(msgState);
+                            }
+                        }
+                    }
+
+                    // twist
+                    int indexForthBack = indexOf("forth_back");
+                    int indexLeftRight = indexOf("left_right");
+                    int indexThrottle = indexOf("throttle");
+                    if (indexForthBack >=0 && indexLeftRight >= 0 && indexThrottle >= 0)
+                    {
+                        int dirBackForth = 0;
+                        if (values[indexForthBack] < 50 + channel_offsets_[indexForthBack])
+                        {
+                            dirBackForth = 1;
+                        }
+                        else if (values[indexForthBack] > 50 - channel_offsets_[indexForthBack])
+                        {
+                            dirBackForth = -1;
+                        }
+
+                        geometry_msgs::msg::Twist msgUnstamped;
+                        int valThrottle = values[indexThrottle];
+                        msgUnstamped.linear.x = dirBackForth * max_linear_ * valThrottle / 100.0;
+                        double angularRatio = 50 + channel_offsets_[indexLeftRight] - values[indexLeftRight];
+                        angularRatio = angular_range_ > 2500.0 ? pow(angularRatio, 3.0) / angular_range_ : angularRatio / angular_range_;
+                        msgUnstamped.angular.z = valThrottle > channel_offsets_[indexThrottle] ? max_angular_ * angularRatio : 0.0;
+                        msgUnstamped.angular.z = fabs(msgUnstamped.angular.z) < min_angular_ ? 0.0 : msgUnstamped.angular.z;
+                        if (pub_twist_)
+                        {
+                            Twist msg;
+                            msg.header.stamp = currentTime;
+                            msg.twist.linear = msgUnstamped.linear;
+                            msg.twist.angular = msgUnstamped.angular;
+                            pub_twist_->publish(msg);
+                        }
+                        else
+                        {
+                            pub_twist_unstamped_->publish(msgUnstamped);
                         }
                     }
                 }
-                else
+            }
+            else if ((values[indexActive] <= 0 + abs(channel_offsets_[indexActive])) &&
+                (values[indexActive] >= 0 - abs(channel_offsets_[indexActive])))
+            {
+                /// other layer: rotary and lift command
+                // motion
+                int indexForthBack = indexOf("forth_back");
+                int indexLeftRight = indexOf("left_right");
+                if (indexForthBack >=0 && indexLeftRight >= 0 &&
+                    (!joints_rotary_.empty() || !joints_lift_linear_.empty()))
                 {
-                    // clear error
-                    int indexClear = indexOf("clear_error");
-                    if (indexClear >= 0 && values[indexClear] > 0)
+                    int dirBackForth = 0;
+                    if (values[indexForthBack] < 50 + channel_offsets_[indexForthBack])
                     {
-                        msgState.state = whi_interfaces::msg::WhiRcState::STA_CLEAR_FAULT;
-                        pub_rc_state_->publish(msgState);
+                        dirBackForth = 1;
                     }
-                }
+                    else if (values[indexForthBack] > 50 - channel_offsets_[indexForthBack])
+                    {
+                        dirBackForth = -1;
+                    }
+                    int dirLeftRight = 0;
+                    if (values[indexLeftRight] < 50 + channel_offsets_[indexLeftRight])
+                    {
+                        dirLeftRight = 1;
+                    }
+                    else if (values[indexLeftRight] > 50 - channel_offsets_[indexLeftRight])
+                    {
+                        dirLeftRight = -1;
+                    }
 
-                int valForthBack = values[indexOf("forth_back")];
-                int offsetForthBack = channel_offsets_[indexOf("forth_back")];
-                int dirBackForth = 0;
-                if (valForthBack < 50 + offsetForthBack)
-                {
-                    dirBackForth = 1;
-                }
-                else if (valForthBack > 50 - offsetForthBack)
-                {
-                    dirBackForth = -1;
-                }
-
-                geometry_msgs::msg::Twist msgUnstamped;
-                int valThrottle = values[indexOf("throttle")];
-                msgUnstamped.linear.x = dirBackForth * max_linear_ * valThrottle / 100.0;
-                double angularRatio = 50 + channel_offsets_[indexOf("left_right")] - values[indexOf("left_right")];
-                angularRatio = angular_range_ > 2500.0 ? pow(angularRatio, 3.0) / angular_range_ : angularRatio / angular_range_;
-                msgUnstamped.angular.z = valThrottle > channel_offsets_[indexOf("throttle")] ? max_angular_ * angularRatio : 0.0;
-                msgUnstamped.angular.z = fabs(msgUnstamped.angular.z) < min_angular_ ? 0.0 : msgUnstamped.angular.z;
-                if (pub_twist_)
-                {
-                    Twist msg;
+                    whi_interfaces::msg::WhiRotaryLiftPoseStamped msg;
                     msg.header.stamp = currentTime;
-                    msg.twist.linear = msgUnstamped.linear;
-                    msg.twist.angular = msgUnstamped.angular;
-                    pub_twist_->publish(msg);
+                    for (const auto& it : joints_rotary_)
+                    {
+                        msg.joints.push_back(it);
+                        if (dirLeftRight == 1)
+                        {
+                            msg.positions.push_back(rotary_position_limits_.second);
+                        }
+                        else
+                        {
+                            msg.positions.push_back(rotary_position_limits_.first);
+                        }
+                        msg.velocities.push_back(abs(values[indexLeftRight] - 50 - channel_offsets_[indexLeftRight]) * rotary_velocity_limits_.second / 50.0);
+                    }
+                    for (const auto& it : joints_lift_linear_)
+                    {
+                        msg.joints.push_back(it);
+                        if (dirBackForth == 1)
+                        {
+                            msg.positions.push_back(lift_position_limits_.second);
+                        }
+                        else
+                        {
+                            msg.positions.push_back(lift_position_limits_.first);
+                        }
+                        msg.velocities.push_back(abs(values[indexForthBack] - 50 - channel_offsets_[indexForthBack]) * lift_velocity_limits_.second / 50.0);
+                    }
+                    pub_rotary_lift_->publish(msg);
                 }
-                else
+
+                // homing
+                int indexTrigger = indexOf("clear_error");
+                if (indexTrigger >= 0 && values[indexTrigger] > 0 - channel_offsets_[indexTrigger])
                 {
-                    pub_twist_unstamped_->publish(msgUnstamped);
+                    whi_interfaces::msg::WhiRotaryLiftPoseStamped msg;
+                    msg.header.stamp = currentTime;
+                    for (const auto& it : joints_rotary_)
+                    {
+                        msg.joints.push_back(it);
+                        msg.positions.push_back(0.0);
+                        msg.velocities.push_back(rotary_velocity_limits_.second);
+                    }
+                    for (const auto& it : joints_lift_linear_)
+                    {
+                        msg.joints.push_back(it);
+                        msg.positions.push_back(lift_position_limits_.first);
+                        msg.velocities.push_back(lift_velocity_limits_.second);
+                    }
+                    pub_rotary_lift_->publish(msg);
                 }
             }
-        }
-        else
-        {
-            msgState.state = whi_interfaces::msg::WhiRcState::STA_INACTIVE;
-            pub_rc_state_->publish(msgState);
+            else
+            {
+                /// inactive
+                msgState.state = whi_interfaces::msg::WhiRcState::STA_INACTIVE;
+                pub_rc_state_->publish(msgState);
+            }
         }
     }
 

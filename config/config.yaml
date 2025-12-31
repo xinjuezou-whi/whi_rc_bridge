@@ -8,12 +8,19 @@ whi_rc_bridge:
     damp_angular: true
     rc_state_topic: rc_state
     sw_estop_topic: estop
+    rotary_lift_topic: third_party_controller/cmd_rotary_lift
+    rotary_joints: ["joint_rotary"]
+    lift_joints: ["joint_lift_linear"]
+    rotary_position_limits: [-3.1415926, 3.1415926]
+    rotary_velocity_limits: [0.0, 0.1]
+    lift_position_limits: [0.0, 0.05]
+    lift_velocity_limits: [0.0, 0.015]
     # for T8S(BT)
     # channels_name: ["left_right", "forth_back", "throttle", "active"]
     # channels_offset: [-1, -10, 2, -40]
     # for T8FB(BT)
     channels_name: ["left_right", "forth_back", "throttle", "dummy", "io", "clear_error", "active"]
-    channels_offset: [0, -10, 2, 0, 0, 0, 0]
+    channels_offset: [0, -1, 2, 0, 0, 0, 0]
     print_raw: false
     hardware: serial
     i2c:
