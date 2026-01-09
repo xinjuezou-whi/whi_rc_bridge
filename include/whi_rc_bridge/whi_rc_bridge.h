@@ -46,6 +46,9 @@ namespace whi_rc_bridge
         int indexOf(const std::string& Name);
         void callbackSwEstop(const std_msgs::msg::Bool::SharedPtr Msg);
         void cancelNaviGoal();
+        int buttonEvent(int ButtonIndex, int Value, const rclcpp::Time& Now);
+        int stickEvent(int ButtonIndex, int Value, const rclcpp::Time& Now);
+        void resetEvent(int ButtonIndex);
 
     protected:
         std::shared_ptr<rclcpp::Node> node_handle_{ nullptr };
@@ -69,6 +72,10 @@ namespace whi_rc_bridge
         double max_angular_{ 1.57 };
         std::vector<std::string> channel_names_;
         std::vector<int64_t> channel_offsets_;
+        std::vector<rclcpp::Time> buttons_press_time_;
+        std::vector<rclcpp::Time> buttons_2nd_press_time_;
+        std::vector<rclcpp::Time> buttons_last_release_time_;
+        std::vector<int> buttons_state_;
         double angular_range_{ 50.0 };
         std::map<int, int> io_maps_;
 		bool print_raw_{ false };
@@ -79,5 +86,11 @@ namespace whi_rc_bridge
         std::pair<double, double> rotary_velocity_limits_{ 0.0, 1.2 };
         std::pair<double, double> lift_position_limits_{ 0.0, 0.05 };
         std::pair<double, double> lift_velocity_limits_{ 0.0, 0.015 };
+
+        enum ButtonState { IDLE = 0, PRESSING, WAIT_SECOND_CLICK, PRESSING_SECOND, STICKING_SMALL, STICKING_BIG };
+        const double CLICK_MAX_S   = 0.3;
+        const double LONG_PRESS_S  = 0.8;
+        const double DOUBLE_GAP_S  = 0.2;
+        enum ButtonEvent { NONE = 0, CLICK, DOUBLE_CLICK, LONG_PRESS, STICK_SMALL, STICK_BIG };
 	};
 } // namespace whi_rc_bridge

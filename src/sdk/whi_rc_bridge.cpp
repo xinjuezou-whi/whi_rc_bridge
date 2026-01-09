@@ -98,6 +98,11 @@ namespace whi_rc_bridge
         node_handle_->declare_parameter<std::vector<int64_t>>("channels_offset", std::vector<int64_t>());
         channel_offsets_ = node_handle_->get_parameter("channels_offset").as_integer_array();
 
+        buttons_press_time_.resize(channel_names_.size(), node_handle_->get_clock()->now());
+        buttons_2nd_press_time_.resize(channel_names_.size(), node_handle_->get_clock()->now());
+        buttons_last_release_time_.resize(channel_names_.size(), node_handle_->get_clock()->now());
+        buttons_state_.resize(channel_names_.size(), IDLE);
+
         node_handle_->declare_parameter<bool>("damp_angular", true);
         bool damp = node_handle_->get_parameter("damp_angular").as_bool();
         if (damp)
@@ -200,7 +205,7 @@ namespace whi_rc_bridge
             if ((values[indexActive] <= 50 + abs(channel_offsets_[indexActive])) &&
                 (values[indexActive] >= 50 - abs(channel_offsets_[indexActive])))
             {
-                /// active
+                /// layer: motion active
                 // neutralize the navigation's goal
                 cancelNaviGoal();
 
@@ -223,7 +228,7 @@ namespace whi_rc_bridge
                             {
                                 msg.addr = found->second;
 
-                                int indexTrigger = indexOf("clear_error");
+                                int indexTrigger = indexOf("trigger");
                                 if (indexTrigger >= 0)
                                 {
                                     msg.level = values[indexTrigger] > 0 - channel_offsets_[indexTrigger] ? 1 : 0;
@@ -235,7 +240,7 @@ namespace whi_rc_bridge
                         else
                         {
                             // clear error
-                            int indexClear = indexOf("clear_error");
+                            int indexClear = indexOf("trigger");
                             if (indexClear >= 0 && values[indexClear] > 0 - channel_offsets_[indexClear])
                             {
                                 msgState.state = whi_interfaces::msg::WhiRcState::STA_CLEAR_FAULT;
@@ -248,7 +253,7 @@ namespace whi_rc_bridge
                     int indexForthBack = indexOf("forth_back");
                     int indexLeftRight = indexOf("left_right");
                     int indexThrottle = indexOf("throttle");
-                    if (indexForthBack >=0 && indexLeftRight >= 0 && indexThrottle >= 0)
+                    if (indexForthBack >= 0 && indexLeftRight >= 0 && indexThrottle >= 0)
                     {
                         int dirBackForth = 0;
                         if (values[indexForthBack] < 50 + channel_offsets_[indexForthBack])
@@ -289,7 +294,7 @@ namespace whi_rc_bridge
                 // motion
                 int indexForthBack = indexOf("forth_back");
                 int indexLeftRight = indexOf("left_right");
-                if (indexForthBack >=0 && indexLeftRight >= 0 &&
+                if (indexForthBack >= 0 && indexLeftRight >= 0 &&
                     (!joints_rotary_.empty() || !joints_lift_linear_.empty()))
                 {
                     int dirBackForth = 0;
@@ -343,7 +348,7 @@ namespace whi_rc_bridge
                 }
 
                 // homing
-                int indexTrigger = indexOf("clear_error");
+                int indexTrigger = indexOf("trigger");
                 if (indexTrigger >= 0 && values[indexTrigger] > 0 - channel_offsets_[indexTrigger])
                 {
                     whi_interfaces::msg::WhiRotaryLiftPoseStamped msg;
@@ -365,8 +370,53 @@ namespace whi_rc_bridge
             }
             else
             {
-                /// inactive
+                /// layer: inactive
                 msgState.state = whi_interfaces::msg::WhiRcState::STA_INACTIVE;
+
+                int indexForthBack = indexOf("forth_back");
+                int indexLeftRight = indexOf("left_right");
+                int indexTrigger = indexOf("trigger");
+                int eventForthBack = ButtonEvent::NONE;
+                int eventLeftRight = ButtonEvent::NONE;
+                int eventTrigger = ButtonEvent::NONE;
+                if (indexForthBack >= 0 && indexLeftRight >= 0 && indexTrigger >= 0)
+                {
+                    eventForthBack = stickEvent(indexForthBack, values[indexForthBack], currentTime);
+                    eventLeftRight = stickEvent(indexLeftRight, values[indexLeftRight], currentTime);
+                    eventTrigger = buttonEvent(indexTrigger, values[indexTrigger], currentTime);
+                }
+
+                if (eventLeftRight == ButtonEvent::STICK_SMALL)
+                {
+                    msgState.function |= 0x01;
+                }
+                else if (eventLeftRight == ButtonEvent::STICK_BIG)
+                {
+                    msgState.function |= 0x02;
+                }
+
+                if (eventForthBack == ButtonEvent::STICK_SMALL)
+                {
+                    msgState.function |= 0x04;
+                }
+                else if (eventForthBack == ButtonEvent::STICK_BIG)
+                {
+                    msgState.function |= 0x08;
+                }
+
+                if (eventTrigger == ButtonEvent::CLICK)
+                {
+                    msgState.function |= 0x10;
+                }
+                else if (eventTrigger == ButtonEvent::DOUBLE_CLICK)
+                {
+                    msgState.function |= 0x20;
+                }
+                else if (eventTrigger == ButtonEvent::LONG_PRESS)
+                {
+                    msgState.function |= 0x40;
+                }
+
                 pub_rc_state_->publish(msgState);
             }
         }
@@ -398,4 +448,152 @@ namespace whi_rc_bridge
 		}
 		client_nav_to_pose_->async_cancel_all_goals();
 	}
+
+    int RcBridge::buttonEvent(int ButtonIndex, int Value, const rclcpp::Time& Now)
+    {
+        bool pressed = (Value >= 100);
+
+        switch (buttons_state_[ButtonIndex])
+        {
+        case ButtonState::IDLE:
+            if (pressed)
+            {
+                buttons_press_time_[ButtonIndex] = Now;
+                buttons_state_[ButtonIndex] = ButtonState::PRESSING;
+            }
+            break;
+        case ButtonState::PRESSING:
+            if (!pressed)
+            {
+                auto dur = (Now - buttons_press_time_[ButtonIndex]).seconds();
+                if (dur >= LONG_PRESS_S)
+                {
+                    resetEvent(ButtonIndex);
+                    return ButtonEvent::LONG_PRESS;
+                }
+
+                if (dur <= CLICK_MAX_S)
+                {
+                    buttons_last_release_time_[ButtonIndex] = Now;
+                    buttons_state_[ButtonIndex] = ButtonState::WAIT_SECOND_CLICK;
+                }
+                else
+                {
+                    resetEvent(ButtonIndex);
+                }
+            }
+            else
+            {
+                auto dur = (Now - buttons_press_time_[ButtonIndex]).seconds();
+                if (dur >= LONG_PRESS_S)
+                {
+                    resetEvent(ButtonIndex);
+                    return ButtonEvent::LONG_PRESS;
+                }
+            }
+            break;
+        case ButtonState::WAIT_SECOND_CLICK:
+            if (pressed)
+            {
+                auto gap = (Now - buttons_last_release_time_[ButtonIndex]).seconds();
+                if (gap <= DOUBLE_GAP_S)
+                {
+                    buttons_2nd_press_time_[ButtonIndex] = Now;
+                    buttons_state_[ButtonIndex] = ButtonState::PRESSING_SECOND;
+                } 
+                else
+                {
+                    resetEvent(ButtonIndex);
+                    return ButtonEvent::CLICK;
+                }
+            }
+            else
+            {
+                auto gap = (Now - buttons_last_release_time_[ButtonIndex]).seconds();
+                if (gap > DOUBLE_GAP_S)
+                {
+                    resetEvent(ButtonIndex);
+                    return ButtonEvent::CLICK;
+                }
+            }
+            break;
+        case ButtonState::PRESSING_SECOND:
+            if (!pressed)
+            {
+                auto dur = (Now - buttons_2nd_press_time_[ButtonIndex]).seconds();
+                if (dur <= CLICK_MAX_S)
+                {
+                    resetEvent(ButtonIndex);
+                    return ButtonEvent::DOUBLE_CLICK;
+                }
+                resetEvent(ButtonIndex);
+            }
+            break;
+        }
+
+        return ButtonEvent::NONE;
+    }
+
+    int RcBridge::stickEvent(int ButtonIndex, int Value, const rclcpp::Time& Now)
+    {
+        bool pressed = (Value < 45 || Value > 55);
+
+        switch (buttons_state_[ButtonIndex])
+        {
+        case ButtonState::IDLE:
+            if (pressed)
+            {
+                buttons_press_time_[ButtonIndex] = Now;
+                buttons_state_[ButtonIndex] = Value < 45 ? ButtonState::STICKING_SMALL : ButtonState::STICKING_BIG;
+            }
+            break;
+        case ButtonState::STICKING_SMALL:
+            if (!pressed)
+            {
+                resetEvent(ButtonIndex);
+
+                auto dur = (Now - buttons_press_time_[ButtonIndex]).seconds();
+                if (dur < CLICK_MAX_S)
+                {
+                    return ButtonEvent::STICK_SMALL;
+                }
+                else
+                {
+                    return ButtonEvent::LONG_PRESS;
+                }
+            }
+            else
+            {
+                buttons_state_[ButtonIndex] = ButtonState::STICKING_SMALL;
+            }
+            break;
+        case ButtonState::STICKING_BIG:
+            if (!pressed)
+            {
+                resetEvent(ButtonIndex);
+
+                auto dur = (Now - buttons_press_time_[ButtonIndex]).seconds();
+                if (dur < CLICK_MAX_S)
+                {
+                    return ButtonEvent::STICK_BIG;
+                }
+                else
+                {
+                    return ButtonEvent::LONG_PRESS;
+                }
+            }
+            else
+            {
+                buttons_state_[ButtonIndex] = ButtonState::STICKING_BIG;
+            }
+            break;
+        }
+
+        return ButtonEvent::NONE;
+    }
+
+    void RcBridge::resetEvent(int ButtonIndex)
+    {
+        buttons_state_[ButtonIndex] = ButtonState::IDLE;
+    }
 } // namespace whi_rc_bridge
