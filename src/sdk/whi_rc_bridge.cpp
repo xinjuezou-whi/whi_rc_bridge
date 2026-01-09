@@ -388,33 +388,33 @@ namespace whi_rc_bridge
 
                 if (eventLeftRight == ButtonEvent::STICK_SMALL)
                 {
-                    msgState.function |= 0x01;
+                    msgState.event |= 0x01;
                 }
                 else if (eventLeftRight == ButtonEvent::STICK_BIG)
                 {
-                    msgState.function |= 0x02;
+                    msgState.event |= 0x02;
                 }
 
                 if (eventForthBack == ButtonEvent::STICK_SMALL)
                 {
-                    msgState.function |= 0x04;
+                    msgState.event |= 0x04;
                 }
                 else if (eventForthBack == ButtonEvent::STICK_BIG)
                 {
-                    msgState.function |= 0x08;
+                    msgState.event |= 0x08;
                 }
 
                 if (eventTrigger == ButtonEvent::CLICK)
                 {
-                    msgState.function |= 0x10;
+                    msgState.event |= 0x10;
                 }
                 else if (eventTrigger == ButtonEvent::DOUBLE_CLICK)
                 {
-                    msgState.function |= 0x20;
+                    msgState.event |= 0x20;
                 }
                 else if (eventTrigger == ButtonEvent::LONG_PRESS)
                 {
-                    msgState.function |= 0x40;
+                    msgState.event |= 0x40;
                 }
 
                 pub_rc_state_->publish(msgState);
