@@ -451,7 +451,7 @@ namespace whi_rc_bridge
 
     int RcBridge::buttonEvent(int ButtonIndex, int Value, const rclcpp::Time& Now)
     {
-        bool pressed = (Value >= 100);
+        bool pressed = (Value >= 100 - channel_offsets_[ButtonIndex] && Value < 255);
 
         switch (buttons_state_[ButtonIndex])
         {
