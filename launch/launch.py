@@ -17,8 +17,8 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
-
-from ament_index_python.packages import get_package_share_directory
+from launch_ros.descriptions import ParameterFile
+from nav2_common.launch import RewrittenYaml
 
 def generate_launch_description():
     # Input parameters declaration
@@ -42,6 +42,16 @@ def generate_launch_description():
         'config.yaml'
     ])
 
+    configured_params = ParameterFile(
+        RewrittenYaml(
+            source_file=config_file,
+            root_key=namespace,
+            param_rewrites={},
+            convert_types=True,
+        ),
+        allow_substs=True,
+    )
+
     # Node definition
     start_whi_rc_bridge_node = Node(
         package='whi_rc_bridge',
@@ -50,7 +60,7 @@ def generate_launch_description():
         namespace=namespace,
         output='screen',
         parameters=[
-            config_file,
+            configured_params,
             {'use_stamped_vel': LaunchConfiguration('use_stamped_vel')} # do not define in yaml if it is dynamic through argument
         ]
     )
