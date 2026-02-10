@@ -88,9 +88,9 @@ namespace whi_rc_bridge
         std::pair<double, double> lift_velocity_limits_{ 0.0, 0.015 };
 
         enum ButtonState { IDLE = 0, PRESSING, WAIT_SECOND_CLICK, PRESSING_SECOND, STICKING_SMALL, STICKING_BIG };
-        const double CLICK_MAX_S   = 0.3;
+        const double CLICK_MAX_S   = 0.4;
         const double LONG_PRESS_S  = 0.8;
-        const double DOUBLE_GAP_S  = 0.2;
+        const double DOUBLE_GAP_S  = 0.4;
         enum ButtonEvent { NONE = 0, CLICK, DOUBLE_CLICK, LONG_PRESS, STICK_SMALL, STICK_BIG };
 	};
 } // namespace whi_rc_bridge

@@ -487,7 +487,7 @@ namespace whi_rc_bridge
                 auto dur = (Now - buttons_press_time_[ButtonIndex]).seconds();
                 if (dur >= LONG_PRESS_S)
                 {
-                    resetEvent(ButtonIndex);
+                    // resetEvent(ButtonIndex);
                     return ButtonEvent::LONG_PRESS;
                 }
             }
